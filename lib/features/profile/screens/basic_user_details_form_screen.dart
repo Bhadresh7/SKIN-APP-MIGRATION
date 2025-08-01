@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
@@ -11,6 +14,10 @@ import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_input_field.dart';
 import 'package:skin_app_migration/core/widgets/k_date_input_field.dart';
 import 'package:skin_app_migration/features/about/terms_and_conditions.dart';
+import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
+import 'package:skin_app_migration/features/message/screens/chat_screen.dart';
+import 'package:skin_app_migration/features/profile/models/user_model.dart';
+import 'package:skin_app_migration/features/profile/screens/image_setup_screen.dart';
 
 class BasicUserDetailsFormScreen extends StatefulWidget {
   const BasicUserDetailsFormScreen({super.key});
@@ -27,6 +34,10 @@ class _BasicUserDetailsFormScreenState
   late TextEditingController userNameController;
   late TextEditingController mobileNumberController;
   late TextEditingController dateController;
+
+  String? selectedRole;
+
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -48,14 +59,14 @@ class _BasicUserDetailsFormScreenState
 
   @override
   Widget build(BuildContext context) {
-    // final authProvider = Provider.of<MyAuthProvider>(context);
+    final authProvider = Provider.of<MyAuthProvider>(context);
     // final basicDetailsProvider = Provider.of<BasicUserDetailsProvider>(context);
     // print("GOOGLE STATUS=====>>>>${context.read<MyAuthProvider>().isGoogle}");
 
     return PopScope(
       canPop: false,
       child: KBackgroundScaffold(
-        // loading: basicDetailsProvider.isLoading,
+        loading: isLoading,
         body: SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: Form(
@@ -75,9 +86,8 @@ class _BasicUserDetailsFormScreenState
                       ),
                     ],
                   ),
-                  Container(
-                    width: 0.6.sw,
-                    alignment: Alignment.center,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10),
                     child: FormBuilderRadioGroup<String>(
                       name: 'role',
                       decoration: InputDecoration(border: InputBorder.none),
@@ -101,7 +111,7 @@ class _BasicUserDetailsFormScreenState
                         ),
                       ],
                       onChanged: (value) {
-                        // basicDetailsProvider.selectRole(role: value);
+                        selectedRole = value;
                       },
                     ),
                   ),
@@ -125,66 +135,74 @@ class _BasicUserDetailsFormScreenState
                   KCustomButton(
                     text: "submit",
                     onPressed: () async {
-                      // if (_formKey.currentState!.validate() &&
-                      //     basicDetailsProvider.selectedRole != null) {
-                      //   UsersModel user = UsersModel(
-                      //     dob: dateController.text.trim(),
-                      //     mobileNumber: mobileNumberController.text.trim(),
-                      //     uid: authProvider.uid,
-                      //     username: userNameController.text.trim(),
-                      //     email: authProvider.email,
-                      //     role: basicDetailsProvider.selectedRole!,
-                      //     isGoogle: authProvider.isGoogle ? true : false,
-                      //     isBlocked: false,
-                      //     canPost: false,
-                      //     isAdmin: basicDetailsProvider.selectedRole! == "admin"
-                      //         ? true
-                      //         : false,
-                      //     password: PasswordHashingHelper.hashPassword(
-                      //       password: authProvider.passwordController.text,
-                      //     ),
-                      //   );
-                      //   final result = await basicDetailsProvider
-                      //       .saveUserToDbAndLocally(user);
-                      //   print(
-                      //     "BASIC USER DEATILS SCREEN ==================${result}",
-                      //   );
-                      //   switch (result) {
-                      //     case AppStatus.kEmailAlreadyExists:
-                      //       ToastHelper.showSuccessToast(
-                      //         context: context,
-                      //         message: AppStatus.kEmailAlreadyExists,
-                      //       );
-                      //       break;
-                      //
-                      //     case AppStatus.kSuccess:
-                      //       await authProvider.completeBasicDetails();
-                      //
-                      //       if (authProvider.isGoogle) {
-                      //         await authProvider.completeImageSetup();
-                      //         MyNavigation.replace(
-                      //           context,
-                      //           HomeScreenVarient2(),
-                      //         );
-                      //       } else {
-                      //         MyNavigation.replace(context, ImageSetupScreen());
-                      //       }
-                      //       return;
-                      //
-                      //     case AppStatus.kFailed:
-                      //       return ToastHelper.showErrorToast(
-                      //         context: context,
-                      //         message: result,
-                      //       );
-                      //
-                      //     default:
-                      //       // Handle unknown status if needed
-                      //       return ToastHelper.showErrorToast(
-                      //         context: context,
-                      //         message: 'Unexpected error occurred.',
-                      //       );
-                      //   }
-                      // }
+                      print('submitting.....');
+                      if (_formKey.currentState!.validate() &&
+                          selectedRole != null) {
+                        isLoading = true;
+                        setState(() {});
+                        QuerySnapshot _tempData = await FirebaseFirestore
+                            .instance
+                            .collection('users')
+                            .where(
+                              'username',
+                              isEqualTo: userNameController.text.trim(),
+                            )
+                            .get();
+                        if (_tempData.docs.isNotEmpty) {
+                          ToastHelper.showErrorToast(
+                            context: context,
+                            message:
+                                'Username already exists, Try a different name.',
+                          );
+                          isLoading = false;
+                          setState(() {});
+                          return;
+                        }
+                        print('submitting..... 1');
+
+                        UsersModel user = UsersModel(
+                          dob: dateController.text.trim(),
+                          mobileNumber: mobileNumberController.text.trim(),
+                          uid: authProvider.user!.uid,
+                          username: userNameController.text.trim(),
+                          email: authProvider.user!.email!,
+                          role: selectedRole!,
+                          isGoogle:
+                              authProvider
+                                      .user!
+                                      .providerData
+                                      .first
+                                      .providerId ==
+                                  "google.com"
+                              ? true
+                              : false,
+                          isBlocked: false,
+                          canPost: false,
+                          isAdmin: selectedRole! == "admin" ? true : false,
+                        );
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(authProvider.user!.uid)
+                            .set(user.toJson());
+                        print('submitting..... 2');
+
+                        print(
+                          "BASIC USER DEATILS SCREEN ==================${user.toJson()}",
+                        );
+                        isLoading = false;
+
+                        if (authProvider.user!.providerData.first.providerId ==
+                            "google.com") {
+                          AppRouter.replace(context, ChatScreen());
+                        } else {
+                          AppRouter.replace(context, ImageSetupScreen());
+                        }
+                      } else {
+                        ToastHelper.showErrorToast(
+                          context: context,
+                          message: "Add All data",
+                        );
+                      }
                     },
                   ),
                   InkWell(

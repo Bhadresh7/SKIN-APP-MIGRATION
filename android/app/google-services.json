@@ -45,20 +45,12 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:824661335158:android:d20acb047e5163404d1357",
+        "mobilesdk_app_id": "1:824661335158:android:347d0f6f093b34964d1357",
         "android_client_info": {
           "package_name": "com.chat.skin_chat_app.skin_app_migration"
         }
       },
       "oauth_client": [
-        {
-          "client_id": "824661335158-efdc5phov5d1nt3onnqr5k9jnf8bnccl.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.chat.skin_chat_app.skin_app_migration",
-            "certificate_hash": "6604124065f1253cd210b6f355bd11b91bd773ba"
-          }
-        },
         {
           "client_id": "824661335158-7j60jpjktmj1le7refhuc30n318h6ro0.apps.googleusercontent.com",
           "client_type": 3

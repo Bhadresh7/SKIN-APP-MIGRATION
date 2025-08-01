@@ -44,6 +44,9 @@ dependencies:
 
   #date package
   intl: ^0.20.2
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.4.0
+  flutter_svg: ^2.2.0
 
 
 

@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/constants/app_status.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart'
     show KBackgroundScaffold;
 import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_input_field.dart';
+import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_login_screen.dart';
+import 'package:skin_app_migration/features/auth/screens/email_verification_screen.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_google_auth_button.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_or_bar.dart';
+
+import '../../../core/helpers/toast_helper.dart';
 
 class AuthRegisterationScreen extends StatefulWidget {
   const AuthRegisterationScreen({super.key});
@@ -28,10 +35,10 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     /// providers
-    // final authProvider = Provider.of<MyAuthProvider>(context);
+    final authProvider = Provider.of<MyAuthProvider>(context);
 
     return KBackgroundScaffold(
-      // loading: authProvider.isLoading,
+      loading: authProvider.isLoading,
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Form(
@@ -40,24 +47,11 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
             spacing: 0.025.sh,
             children: [
               Lottie.asset(AppAssets.login, height: 0.25.sh),
-              KCustomInputField(
-                name: "username",
-                hintText: "Username",
-                // controller: authProvider.usernameController,
-                validators: [
-                  FormBuilderValidators.required(
-                    errorText: "Username is required",
-                  ),
-                  FormBuilderValidators.minLength(
-                    3,
-                    errorText: "Must be at least 3 characters",
-                  ),
-                ],
-              ),
+
               KCustomInputField(
                 name: "email",
                 hintText: "Email",
-                // controller: authProvider.emailController,
+                controller: authProvider.emailController,
                 validators: [
                   FormBuilderValidators.email(),
                   FormBuilderValidators.required(
@@ -69,7 +63,7 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
                 isPassword: true,
                 name: "password",
                 hintText: "Password",
-                // controller: authProvider.passwordController,
+                controller: authProvider.passwordController,
                 validators: [
                   FormBuilderValidators.required(
                     errorText: "password is required",
@@ -84,7 +78,7 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
                 isPassword: true,
                 name: "confirm password",
                 hintText: "Confirm Password",
-                // controller: authProvider.confirmPasswordController,
+                controller: authProvider.confirmPasswordController,
                 validators: [
                   FormBuilderValidators.required(
                     errorText: "password is required",
@@ -98,58 +92,58 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
               KCustomButton(
                 text: "Register",
                 onPressed: () async {
-                  // if (formKey.currentState!.validate()) {
-                  //   if (!(authProvider.passwordController.text.trim() ==
-                  //       authProvider.confirmPasswordController.text.trim())) {
-                  //     return ToastHelper.showErrorToast(
-                  //       context: context,
-                  //       message: "Password doesn't match",
-                  //     );
-                  //   }
-                  //   final result = await authProvider
-                  //       .signUpWithEmailAndPassword(
-                  //         username: authProvider.usernameController.text.trim(),
-                  //         email: authProvider.emailController.text.trim(),
-                  //         password: authProvider.passwordController.text.trim(),
-                  //       );
-                  //   if (context.mounted) {
-                  //     switch (result) {
-                  //       case AppStatus.kUserNameAlreadyExists:
-                  //         return ToastHelper.showErrorToast(
-                  //           context: context,
-                  //           message: AppStatus.kUserNameAlreadyExists,
-                  //         );
-                  //       case AppStatus.kEmailAlreadyExists:
-                  //         return ToastHelper.showErrorToast(
-                  //           context: context,
-                  //           message: AppStatus.kEmailAlreadyExists,
-                  //         );
-                  //       case AppStatus.kUserFound:
-                  //         return ToastHelper.showErrorToast(
-                  //           context: context,
-                  //           message: "Username already exists",
-                  //         );
-                  //       case AppStatus.kFailed:
-                  //         return ToastHelper.showErrorToast(
-                  //           context: context,
-                  //           message: "Failed to Register",
-                  //         );
-                  //       case AppStatus.kSuccess:
-                  //         ToastHelper.showSuccessToast(
-                  //           context: context,
-                  //           message: "Registeration successful",
-                  //         );
-                  //
-                  //         MyNavigation.to(context, EmailVerificationScreen());
-                  //         break;
-                  //       default:
-                  //         return ToastHelper.showErrorToast(
-                  //           context: context,
-                  //           message: result,
-                  //         );
-                  //     }
-                  //   }
-                  // }
+                  MyAuthProvider authProvider = context.readAuthProvider;
+                  if (formKey.currentState!.validate()) {
+                    if (!(authProvider.passwordController.text.trim() ==
+                        authProvider.confirmPasswordController.text.trim())) {
+                      return ToastHelper.showErrorToast(
+                        context: context,
+                        message: "Password doesn't match",
+                      );
+                    }
+
+                    final result = await authProvider
+                        .signUpWithEmailAndPassword(
+                          email: authProvider.emailController.text.trim(),
+                          password: authProvider.passwordController.text.trim(),
+                        );
+                    if (context.mounted) {
+                      switch (result) {
+                        case AppStatus.kUserNameAlreadyExists:
+                          return ToastHelper.showErrorToast(
+                            context: context,
+                            message: AppStatus.kUserNameAlreadyExists,
+                          );
+                        case AppStatus.kEmailAlreadyExists:
+                          return ToastHelper.showErrorToast(
+                            context: context,
+                            message: AppStatus.kEmailAlreadyExists,
+                          );
+                        case AppStatus.kUserFound:
+                          return ToastHelper.showErrorToast(
+                            context: context,
+                            message: "Username already exists",
+                          );
+                        case AppStatus.kFailed:
+                          return ToastHelper.showErrorToast(
+                            context: context,
+                            message: "Failed to Register",
+                          );
+                        case AppStatus.kSuccess:
+                          ToastHelper.showSuccessToast(
+                            context: context,
+                            message: "Registeration successful",
+                          );
+                          AppRouter.replace(context, EmailVerificationScreen());
+                          break;
+                        default:
+                          return ToastHelper.showErrorToast(
+                            context: context,
+                            message: result,
+                          );
+                      }
+                    }
+                  }
                 },
               ),
 

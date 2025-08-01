@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyACQdzcrmruNKIM94m7EzvhAVW4-eLKh1w',
-    appId: '1:824661335158:android:d20acb047e5163404d1357',
+    appId: '1:824661335158:android:347d0f6f093b34964d1357',
     messagingSenderId: '824661335158',
     projectId: 'skin-7def2',
     databaseURL: 'https://skin-7def2-default-rtdb.firebaseio.com',

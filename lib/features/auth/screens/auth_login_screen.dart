@@ -5,6 +5,7 @@ import 'package:lottie/lottie.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
@@ -13,6 +14,7 @@ import 'package:skin_app_migration/core/widgets/k_custom_input_field.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_registeration_screen.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_google_auth_button.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_or_bar.dart';
+import 'package:skin_app_migration/features/message/screens/chat_screen.dart';
 
 class AuthLoginScreen extends StatefulWidget {
   const AuthLoginScreen({super.key});
@@ -40,68 +42,67 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
     passwordController.dispose();
   }
 
-  // void getAuthBaseScreen(BuildContext context, String result) {
-  //   switch (result) {
-  //     case AppStatus.kBlocked:
-  //       showDialog(
-  //         context: context,
-  //         builder: (BuildContext context) {
-  //           return AlertDialog(
-  //             title: Text("Account Disabled"),
-  //             content: Text(
-  //               "Your account has been disabled. Please contact support.",
-  //             ),
-  //             actions: [
-  //               TextButton(
-  //                 onPressed: () => MyNavigation.back(context),
-  //                 child: Text("OK"),
-  //               ),
-  //             ],
-  //           );
-  //         },
-  //       );
-  //       break;
-  //
-  //     case AppStatus.kInvalidCredential:
-  //       ToastHelper.showErrorToast(
-  //         context: context,
-  //         message: "Invalid email or password",
-  //       );
-  //       break;
-  //
-  //     case AppStatus.kUserNotFound:
-  //       ToastHelper.showErrorToast(
-  //         context: context,
-  //         message: "User not found. Please register first.",
-  //       );
-  //       break;
-  //
-  //     case AppStatus.kSuccess:
-  //       // User exists and login successful - go to home screen
-  //       MyNavigation.replace(context, HomeScreenVarient2());
-  //       ToastHelper.showSuccessToast(
-  //         context: context,
-  //         message: "Login successful",
-  //       );
-  //       break;
-  //
-  //     case AppStatus.kFailed:
-  //     default:
-  //       ToastHelper.showErrorToast(
-  //         context: context,
-  //         message: "Login failed. Please try again.",
-  //       );
-  //       break;
-  //   }
-  // }
+  ///formKey
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  void getAuthBaseScreen(BuildContext context, String result) {
+    switch (result) {
+      case AppStatus.kBlocked:
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Account Disabled"),
+              content: Text(
+                "Your account has been disabled. Please contact support.",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => AppRouter.back(context),
+                  child: Text("OK"),
+                ),
+              ],
+            );
+          },
+        );
+        break;
+
+      case AppStatus.kInvalidCredential:
+        ToastHelper.showErrorToast(
+          context: context,
+          message: "Invalid email or password",
+        );
+        break;
+
+      case AppStatus.kUserNotFound:
+        ToastHelper.showErrorToast(
+          context: context,
+          message: "User not found. Please register first.",
+        );
+        break;
+
+      case AppStatus.kSuccess:
+        // User exists and login successful - go to home screen
+        AppRouter.replace(context, ChatScreen());
+        ToastHelper.showSuccessToast(
+          context: context,
+          message: "Login successful",
+        );
+        break;
+
+      case AppStatus.kFailed:
+      default:
+        ToastHelper.showErrorToast(
+          context: context,
+          message: "Login failed. Please try again.",
+        );
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    ///formKey
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
     return KBackgroundScaffold(
-      // loading: authProvider.isLoading,
+      loading: context.readAuthProvider.isLoading,
       body: SingleChildScrollView(
         child: Form(
           key: formKey,
@@ -165,9 +166,10 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
                           .signInWithEmailAndPassword(
                             email: emailController.text.trim(),
                             password: passwordController.text.trim(),
+                            context: context,
                           );
 
-                      // getAuthBaseScreen(context, result);
+                      getAuthBaseScreen(context, result);
                       // print("=========================$result");
                     }
                   }
