@@ -1,20 +1,15 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_sharing_intent/model/sharing_file.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/provider/internet_provider.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
-import 'package:skin_app_migration/features/message/models/meta_model.dart';
 import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
 import 'package:skin_app_migration/features/message/widgets/message_text_field.dart';
-
-import '../provider/chat_provider.dart';
-import 'image_preview_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -24,9 +19,24 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  @override
+  void initState() {
+    super.initState();
 
+    final chatProvider = context.readChatProvider;
+    final internetProvider = context.readInternetProvider;
 
+    chatProvider.loadMessages();
 
+    internetProvider.onReconnected = () async {
+      await chatProvider.syncFirestoreToLocal();
+    };
+
+    // Optional: Immediate sync if already online
+    if (internetProvider.connectionStatus == AppStatus.kConnected) {
+      chatProvider.syncFirestoreToLocal();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,55 +58,76 @@ class _ChatScreenState extends State<ChatScreen> {
         body: Column(
           children: [
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('chats')
-                    .orderBy('ts', descending: true)
-                    .snapshots(),
-                builder: (context, asyncSnapshot) {
-                  if (asyncSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
+              child: Consumer<InternetProvider>(
+                builder: (context, internetProvider, _) {
+                  // Is Online
+                  final isOnline =
+                      internetProvider.connectionStatus == AppStatus.kConnected;
+
+                  if (isOnline) {
+                    // ONLINE: Use Firestore stream
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('chats')
+                          .orderBy('ts', descending: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text('No messages yet.'));
+                        }
+
+                        final chatDocs = snapshot.data!.docs;
+
+                        return ListView.builder(
+                          reverse: true,
+                          itemCount: chatDocs.length,
+                          itemBuilder: (context, index) {
+                            final data =
+                                chatDocs[index].data() as Map<String, dynamic>;
+
+                            return Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: ChatBubble(
+                                chatMessage: ChatMessageModel.fromJson(data),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  } else {
+                    // OFFLINE: Use local DB
+                    final messages = context.watchChatProvider.messages;
+
+                    if (messages.isEmpty) {
+                      return const Center(child: Text('No offline messages.'));
+                    }
+
+                    return ListView.builder(
+                      reverse: true,
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final message = messages[messages.length - 1 - index];
+                        return Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: ChatBubble(chatMessage: message),
+                        );
+                      },
+                    );
                   }
-
-                  if (!asyncSnapshot.hasData ||
-                      asyncSnapshot.data!.docs.isEmpty) {
-                    return Center(child: Text('No messages yet.'));
-                  }
-
-                  final chatDocs = asyncSnapshot.data!.docs;
-
-                  return ListView.builder(
-                    reverse: true,
-                    itemCount: chatDocs.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final messageData =
-                          chatDocs[index].data() as Map<String, dynamic>;
-                      final message = MetaModel.fromJson(
-                        messageData['metadata'],
-                      );
-
-                      final senderId = messageData['id'];
-
-                      return Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: ChatBubble(
-                          chatMessage: ChatMessageModel(
-                            metadata: message,
-                            senderId: senderId,
-                            createdAt: DateTime.now().millisecondsSinceEpoch,
-                            name:
-                                context.readAuthProvider.user!.displayName ??
-                                context.readAuthProvider.userData!.username,
-                          ),
-                        ),
-                      );
-                    },
-                  );
                 },
               ),
             ),
-            MessageTextField(messageController: context.readChatProvider.messageController),
+            MessageTextField(
+              messageController: context.readChatProvider.messageController,
+            ),
           ],
         ),
       ),
