@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:provider/provider.dart';
+import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_input_field.dart';
 import 'package:skin_app_migration/core/widgets/k_date_input_field.dart';
+import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
 
 import '../../../core/extensions/provider_extensions.dart';
 import '../../../core/provider/image_picker_provider.dart';
@@ -127,6 +129,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    MyAuthProvider authProvider =Provider.of<MyAuthProvider>(context);
     return KBackgroundScaffold(
       appBar: AppBar(title: Text('Edit Profile')),
       body: Form(
@@ -140,9 +143,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
               child: CircleAvatar(
                 radius: 0.3.sw,
-                backgroundImage: imagePickerProvider.selectedImage != null
-                    ? FileImage(imagePickerProvider.selectedImage!)
-                    : NetworkImage(context.readAuthProvider.user!.photoURL!),
+                backgroundImage:
+                 imagePickerProvider.selectedImage != null? FileImage(imagePickerProvider.selectedImage!):
+                authProvider.userData!.isGoogle!?NetworkImage(context.readAuthProvider.user!.photoURL!):authProvider.userData!.imageUrl!=null?
+                NetworkImage(context.readAuthProvider.userData!.imageUrl!):
+                     AssetImage(AppAssets.profileImage),
+
               ),
             ),
             const SizedBox(height: 20),

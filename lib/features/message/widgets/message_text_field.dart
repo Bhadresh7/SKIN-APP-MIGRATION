@@ -52,73 +52,75 @@ class _MessageTextFieldState extends State<MessageTextField> {
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 10.sp),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            decoration: BoxDecoration(
-              color: AppStyles.primary,
-              borderRadius: BorderRadius.circular(50),
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade300, width: 1),
+          child: SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppStyles.primary,
+                borderRadius: BorderRadius.circular(50),
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                // Attachment button
-                IconButton(
-                  onPressed: () async {
-                    final status = await context.readImagePickerProvider
-                        .pickImage();
+              child: Row(
+                children: [
+                  // Attachment button
+                  IconButton(
+                    onPressed: () async {
+                      final status = await context.readImagePickerProvider
+                          .pickImage();
 
-                    if (status == AppStatus.kSuccess) {
-                      AppRouter.to(
-                        context,
-                        ImagePreviewScreen(
-                          image: context.readImagePickerProvider.selectedImage!,
-                          onSend: (e) {
-                            print(e);
-                          },
-                        ),
-                      );
-                    }
-                  },
-                  icon: Icon(Icons.attach_file, color: AppStyles.smoke),
-                ),
-
-                // Text field
-                Expanded(
-                  child: TextField(
-                    autofocus: false,
-                    onChanged: (values) {
-                      _updateMaxLines();
+                      if (status == AppStatus.kSuccess) {
+                        AppRouter.to(
+                          context,
+                          ImagePreviewScreen(
+                            image: context.readImagePickerProvider.selectedImage!,
+                            onSend: (e) {
+                              print(e);
+                            },
+                          ),
+                        );
+                      }
                     },
-                    controller: widget.messageController,
-                    decoration: InputDecoration(
-                      hintText: "Type a message",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      hintStyle: TextStyle(color: AppStyles.smoke),
-                    ),
-                    style: TextStyle(color: AppStyles.smoke),
-                    cursorColor: AppStyles.smoke,
-                    maxLines: maxLines,
-                    textCapitalization: TextCapitalization.sentences,
+                    icon: Icon(Icons.attach_file, color: AppStyles.smoke),
                   ),
-                ),
 
-                const SizedBox(width: 8),
-                // Send button
-                IconButton(
-                  onPressed: () {},
-                  icon: Icon(Icons.send, color: AppStyles.smoke),
-                  // onPressed: _handleSendPressed,
-                ),
-              ],
+                  // Text field
+                  Expanded(
+                    child: TextField(
+                      autofocus: false,
+                      onChanged: (values) {
+                        _updateMaxLines();
+                      },
+                      controller: widget.messageController,
+                      decoration: InputDecoration(
+                        hintText: "Type a message",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        hintStyle: TextStyle(color: AppStyles.smoke),
+                      ),
+                      style: TextStyle(color: AppStyles.smoke),
+                      cursorColor: AppStyles.smoke,
+                      maxLines: maxLines,
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+                  // Send button
+                  IconButton(
+                    onPressed: () {},
+                    icon: Icon(Icons.send, color: AppStyles.smoke),
+                    // onPressed: _handleSendPressed,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

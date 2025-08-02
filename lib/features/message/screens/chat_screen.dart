@@ -80,7 +80,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               context.readAuthProvider.user?.uid == senderId,
                           avatarUrl:
                               context.readAuthProvider.user?.photoURL ??
-                              context.readAuthProvider.userData!.imageUrl!,
+                              context.readAuthProvider.userData!.imageUrl,
+                          senderName: context.readAuthProvider.userData!.username,
                         ),
                       );
                     },

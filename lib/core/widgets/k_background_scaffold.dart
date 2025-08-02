@@ -2,10 +2,14 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/features/profile/screens/edit_profile_screen.dart';
+
+import '../../features/auth/providers/my_auth_provider.dart';
+import '../constants/app_assets.dart';
 
 class KBackgroundScaffold extends StatefulWidget {
   const KBackgroundScaffold({
@@ -39,7 +43,7 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    // final authProvider = context.watch<MyAuthProvider>();
+    final authProvider = context.watch<MyAuthProvider>();
 
     return Scaffold(
       appBar: widget.appBar,
@@ -55,16 +59,14 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                         child: Builder(
                           builder: (context) {
                             return ClipOval(
-                              child: Image.network(
-                                context.readAuthProvider.user!.photoURL ??
-                                    context
-                                        .readAuthProvider
-                                        .userData!
-                                        .imageUrl ??
-                                    "",
-                                fit: BoxFit.cover,
-                                width: 0.25.sw,
-                                height: 0.25.sw,
+                              child: CircleAvatar(
+                                radius: 0.3.sw,
+                                backgroundImage:
+
+                                authProvider.userData!.isGoogle!?NetworkImage(context.readAuthProvider.user!.photoURL!):authProvider.userData!.imageUrl!=null?
+                                NetworkImage(context.readAuthProvider.userData!.imageUrl!):
+                                AssetImage(AppAssets.profileImage),
+
                               ),
                             );
                           },
