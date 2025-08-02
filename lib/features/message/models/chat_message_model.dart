@@ -1,31 +1,39 @@
-class ChatMessageModel {
-  final String messageId;
-  final Map<String, dynamic> authorJson;
-  final int createdAt;
+import 'package:skin_app_migration/features/message/models/meta_model.dart';
 
+class ChatMessageModel {
+  final String senderId;
+  final int createdAt;
+  final String name;
+  final MetaModel? metadata;
   ChatMessageModel({
-    required this.messageId,
-    required this.authorJson,
+    required this.metadata,
+    required this.senderId,
     required this.createdAt,
+    required this.name,
   });
 
   /// Create from JSON
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     return ChatMessageModel(
-      messageId: json['id'] as String,
-      authorJson: json['author'] as Map<String, dynamic>,
-      createdAt:
-          json['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+      metadata: MetaModel.fromJson(json['metadata']),
+      senderId: json['id'] as String,
+      name: json['name'] as String,
+      createdAt: json['ts'] as int? ?? DateTime.now().millisecondsSinceEpoch,
     );
   }
 
   /// Convert to JSON
   Map<String, dynamic> toJson() {
-    return {'id': messageId, 'author': authorJson, 'createdAt': createdAt};
+    return {
+      'id': senderId,
+      'ts': createdAt,
+      'name': name,
+      'metadata': metadata?.toJson(),
+    };
   }
 
   @override
   String toString() {
-    return 'ChatMessageModel{id: $messageId, authorJson: $authorJson, createdAt: $createdAt}';
+    return 'ChatMessageModel{ createdAt: $createdAt}';
   }
 }

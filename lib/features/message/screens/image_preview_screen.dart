@@ -1,8 +1,13 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
+import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
+import 'package:skin_app_migration/features/message/models/meta_model.dart';
 
 class ImagePreviewScreen extends StatefulWidget {
   final File image;
@@ -94,9 +99,60 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      widget.onSend(textController.text.trim());
+                    onPressed: () async {
+                      if (context.readImagePickerProvider.selectedImage !=
+                          null) {
+                        File? compressedImage = await context
+                            .readImagePickerProvider
+                            .compressImage(
+                              context.readImagePickerProvider.selectedImage!,
+                            );
+
+                        if (compressedImage == null) return;
+                        String filePath =
+                            "chat_imgs/${context.readAuthProvider.user!.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg";
+                        Reference storageRef = FirebaseStorage.instance
+                            .ref()
+                            .child(filePath);
+                        UploadTask uploadTask = storageRef.putFile(
+                          compressedImage,
+                        );
+
+                        // Optional: Show upload progress
+                        uploadTask.snapshotEvents.listen((
+                          TaskSnapshot snapshot,
+                        ) {
+                          double progress =
+                              snapshot.bytesTransferred / snapshot.totalBytes;
+                          print(
+                            "📤 Upload Progress: ${(progress * 100).toStringAsFixed(2)}%",
+                          );
+                        });
+
+                        TaskSnapshot snapshot = await uploadTask;
+                        String downloadUrl = await snapshot.ref
+                            .getDownloadURL();
+                        await FirebaseFirestore.instance
+                            .collection('chats')
+                            .add(
+                              ChatMessageModel(
+                                metadata: MetaModel(
+                                  img: downloadUrl,
+                                  text: textController.text,
+                                  url: extractFirstUrl(
+                                    textController.text.trim(),
+                                  ),
+                                ),
+                                senderId: context.readAuthProvider.user!.uid,
+                                createdAt:
+                                    DateTime.now().millisecondsSinceEpoch,
+                                name:
+                                    context.readAuthProvider.userData!.username,
+                              ).toJson(),
+                            );
+                      }
+
+                      AppRouter.back(context);
                     },
                   ),
                 ],
@@ -106,5 +162,15 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
         ],
       ),
     );
+  }
+
+  String? extractFirstUrl(String text) {
+    final urlRegex = RegExp(
+      r'(?:(?:https?|ftp)://)?(?:[\w-]+\.)+[a-z]{2,}(?:/\S*)?',
+      caseSensitive: false,
+    );
+
+    final match = urlRegex.firstMatch(text);
+    return match?.group(0);
   }
 }

@@ -44,6 +44,11 @@ dependencies:
   #  internet image
   cached_network_image: ^3.4.1
 
+  #  fetch metadata from url
+  metadata_fetch: ^0.4.2
+
+  #url launcher
+  url_launcher: ^6.3.2
 
   #date package
   intl: ^0.20.2

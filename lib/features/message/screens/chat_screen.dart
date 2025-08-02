@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
+import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
+import 'package:skin_app_migration/features/message/models/meta_model.dart';
 import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
 import 'package:skin_app_migration/features/message/widgets/message_text_field.dart';
 
@@ -68,20 +70,23 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemBuilder: (BuildContext context, int index) {
                       final messageData =
                           chatDocs[index].data() as Map<String, dynamic>;
-                      final messageText = messageData['metadata']['text']
-                          .toString();
+                      final message = MetaModel.fromJson(
+                        messageData['metadata'],
+                      );
+
                       final senderId = messageData['id'];
 
                       return Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: ChatBubble(
-                          message: messageText,
-                          isSender:
-                              context.readAuthProvider.user?.uid == senderId,
-                          avatarUrl:
-                              context.readAuthProvider.user?.photoURL ??
-                              context.readAuthProvider.userData!.imageUrl,
-                          senderName: context.readAuthProvider.userData!.username,
+                          chatMessage: ChatMessageModel(
+                            metadata: message,
+                            senderId: senderId,
+                            createdAt: DateTime.now().millisecondsSinceEpoch,
+                            name:
+                                context.readAuthProvider.user!.displayName ??
+                                context.readAuthProvider.userData!.username,
+                          ),
                         ),
                       );
                     },

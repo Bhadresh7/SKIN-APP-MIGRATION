@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
+import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
+import 'package:skin_app_migration/features/message/models/meta_model.dart';
 import 'package:skin_app_migration/features/message/screens/image_preview_screen.dart';
 
 class MessageTextField extends StatefulWidget {
@@ -74,7 +77,8 @@ class _MessageTextFieldState extends State<MessageTextField> {
                         AppRouter.to(
                           context,
                           ImagePreviewScreen(
-                            image: context.readImagePickerProvider.selectedImage!,
+                            image:
+                                context.readImagePickerProvider.selectedImage!,
                             onSend: (e) {
                               print(e);
                             },
@@ -115,9 +119,27 @@ class _MessageTextFieldState extends State<MessageTextField> {
                   const SizedBox(width: 8),
                   // Send button
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final message = ChatMessageModel(
+                        senderId: context.readAuthProvider.user!.uid,
+
+                        createdAt: DateTime.now().millisecondsSinceEpoch,
+                        metadata: MetaModel(
+                          text: widget.messageController.text.trim(),
+                          url: extractFirstUrl(
+                            widget.messageController.text.trim(),
+                          ),
+                        ),
+                        name: context.readAuthProvider.userData!.username,
+                      );
+
+                      widget.messageController.clear();
+                      _updateMaxLines();
+                      await FirebaseFirestore.instance
+                          .collection('chats')
+                          .add(message.toJson());
+                    },
                     icon: Icon(Icons.send, color: AppStyles.smoke),
-                    // onPressed: _handleSendPressed,
                   ),
                 ],
               ),
