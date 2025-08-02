@@ -1,11 +1,15 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
 
+import '../../features/profile/models/user_model.dart';
 import '../constants/app_db.dart';
 import '../constants/app_status.dart';
 
@@ -110,7 +114,7 @@ class ImagePickerProvider extends ChangeNotifier {
 
   bool isUploading = false;
 
-  Future<String?> uploadImageToFirebase(String userId) async {
+  Future<String?> uploadImageToFirebase(String userId,context) async {
     if (selectedImage == null) return AppStatus.kFailed;
 
     isUploading = true;
@@ -160,6 +164,9 @@ class ImagePickerProvider extends ChangeNotifier {
       // await HiveService.updateUserImageInHive(downloadUrl);
       // Step 4: Update Firestore document
       await docToUpdate.update({"imageUrl": downloadUrl});
+      MyAuthProvider authProvider=Provider.of<MyAuthProvider>(context);
+      DocumentSnapshot _doc = await FirebaseFirestore.instance.collection('users').doc(authProvider.user!.uid).get();
+      authProvider.userData=UsersModel.fromFirestore(_doc.data() as Map<String,dynamic>);
       print("✅ imageUrl updated for $userId: $downloadUrl");
 
       return downloadUrl;
