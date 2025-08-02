@@ -21,4 +21,6 @@ extension AuthProviderExtension on BuildContext {
 
 
   ChatProvider get readChatProvider => read<ChatProvider>();
+
+  ChatProvider get watchChatProvider => watch<ChatProvider>();
 }

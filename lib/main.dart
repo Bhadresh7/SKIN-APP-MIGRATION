@@ -3,18 +3,34 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:skin_app_migration/core/helpers/app_logger_helper.dart';
 import 'package:skin_app_migration/core/provider/image_picker_provider.dart';
 import 'package:skin_app_migration/core/provider/internet_provider.dart';
+import 'package:skin_app_migration/core/service/local_db_service.dart';
 import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
 import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
 import 'package:skin_app_migration/features/splash/screens/splash_screen.dart';
-
 import 'core/theme/app_styles.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Local DB Service
+  final localDBService = LocalDBService();
+  await localDBService.init();
+
+  if (localDBService.isInitialized) {
+    AppLoggerHelper.logInfo(
+      "Local DB Initialized and Database is ready to use.",
+    );
+  } else {
+    AppLoggerHelper.logError(
+      "Local DB Initialization Failed. Database is not ready to use.",
+    );
+  }
+
+  // Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
@@ -26,7 +42,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => MyAuthProvider()),
         ChangeNotifierProvider(create: (_) => InternetProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
-
         ChangeNotifierProvider(create: (_) => ImagePickerProvider()),
       ],
       child: MyApp(),
