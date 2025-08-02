@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/provider/image_picker_provider.dart';
 import 'package:skin_app_migration/core/provider/internet_provider.dart';
 import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
+import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
 import 'package:skin_app_migration/features/splash/screens/splash_screen.dart';
 
 import 'core/theme/app_styles.dart';
@@ -24,6 +25,8 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => MyAuthProvider()),
         ChangeNotifierProvider(create: (_) => InternetProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
+
         ChangeNotifierProvider(create: (_) => ImagePickerProvider()),
       ],
       child: MyApp(),

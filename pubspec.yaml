@@ -56,6 +56,10 @@ dependencies:
   flutter_image_compress: ^2.4.0
   flutter_svg: ^2.2.0
 
+#  content sharing
+  flutter_sharing_intent: ^1.1.1
+  receive_intent: ^0.2.7
+
 
 
 

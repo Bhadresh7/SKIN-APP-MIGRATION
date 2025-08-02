@@ -143,12 +143,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
               child: CircleAvatar(
                 radius: 0.3.sw,
-                backgroundImage:
-                 imagePickerProvider.selectedImage != null? FileImage(imagePickerProvider.selectedImage!):
-                authProvider.userData!.isGoogle!?NetworkImage(context.readAuthProvider.user!.photoURL!):authProvider.userData!.imageUrl!=null?
-                NetworkImage(context.readAuthProvider.userData!.imageUrl!):
-                     AssetImage(AppAssets.profileImage),
-
               ),
             ),
             const SizedBox(height: 20),

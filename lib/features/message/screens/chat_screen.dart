@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_sharing_intent/model/sharing_file.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
@@ -8,6 +12,9 @@ import 'package:skin_app_migration/features/message/models/chat_message_model.da
 import 'package:skin_app_migration/features/message/models/meta_model.dart';
 import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
 import 'package:skin_app_migration/features/message/widgets/message_text_field.dart';
+
+import '../provider/chat_provider.dart';
+import 'image_preview_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -17,14 +24,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  // late NotificationService service;
-  late TextEditingController messageController;
 
-  @override
-  void initState() {
-    messageController = TextEditingController();
-    super.initState();
-  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +96,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ),
-            MessageTextField(messageController: messageController),
+            MessageTextField(messageController: context.readChatProvider.messageController),
           ],
         ),
       ),

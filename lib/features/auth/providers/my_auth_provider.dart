@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_login_screen.dart';
 import 'package:skin_app_migration/features/auth/screens/email_verification_screen.dart';
+import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
 import 'package:skin_app_migration/features/message/screens/chat_screen.dart';
 import 'package:skin_app_migration/features/profile/models/user_model.dart';
 import 'package:skin_app_migration/features/profile/screens/basic_user_details_form_screen.dart';
@@ -54,6 +56,8 @@ class MyAuthProvider extends ChangeNotifier {
         if (!userData!.isGoogle! && userData!.imageUrl == null) {
           AppRouter.replace(context, ImageSetupScreen());
         } else
+          Provider.of<ChatProvider>(context,listen:false). initializeSharingIntent(context);
+        Provider.of<ChatProvider>(context,listen:false).initIntentHandling();
           AppRouter.replace(context, ChatScreen());
       }
     }

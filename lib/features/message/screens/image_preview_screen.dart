@@ -11,12 +11,12 @@ import 'package:skin_app_migration/features/message/models/meta_model.dart';
 
 class ImagePreviewScreen extends StatefulWidget {
   final File image;
-  final Function(String) onSend;
+
   final String? initialText; // Add this parameter
 
   const ImagePreviewScreen({
     required this.image,
-    required this.onSend,
+
     this.initialText, // Make it optional
     super.key,
   });
@@ -100,6 +100,11 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
                   IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
                     onPressed: () async {
+                      print(context.readImagePickerProvider.selectedImage);
+
+                      if(context.readImagePickerProvider.selectedImage==null){
+
+                        context.readImagePickerProvider.selectedImage=widget.image;}
                       if (context.readImagePickerProvider.selectedImage !=
                           null) {
                         File? compressedImage = await context

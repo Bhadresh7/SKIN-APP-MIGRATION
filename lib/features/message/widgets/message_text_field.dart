@@ -79,9 +79,7 @@ class _MessageTextFieldState extends State<MessageTextField> {
                           ImagePreviewScreen(
                             image:
                                 context.readImagePickerProvider.selectedImage!,
-                            onSend: (e) {
-                              print(e);
-                            },
+
                           ),
                         );
                       }
