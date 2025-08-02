@@ -208,4 +208,17 @@ class MyAuthProvider extends ChangeNotifier {
       _setLoadingState(false);
     }
   }
+
+  Future<void> signOut(BuildContext context) async {
+    try {
+      AppRouter.offAll(context, AuthLoginScreen());
+      await _auth.signOut();
+      if (await GoogleSignIn().isSignedIn()) {
+        await GoogleSignIn().signOut();
+      }
+      // Navigate after successful sign-out
+    } catch (e) {
+      print("Sign-out error: $e");
+    }
+  }
 }

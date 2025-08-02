@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
+import 'package:skin_app_migration/features/profile/screens/edit_profile_screen.dart';
 
 class KBackgroundScaffold extends StatefulWidget {
   const KBackgroundScaffold({
@@ -47,50 +49,34 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                 children: [
                   SizedBox(
                     height: 0.25.sh,
-                    // child: UserAccountsDrawerHeader(
-                    //   currentAccountPictureSize: Size(0.25.sw, 0.25.sw),
-                    //   currentAccountPicture: CircleAvatar(
-                    //     child: Builder(
-                    //       builder: (context) {
-                    //         final localImageUrl =
-                    //             HiveService.getCurrentUser()?.imageUrl;
-                    //         final remoteImageUrl =
-                    //             authProvider.currentUser?.imageUrl;
-                    //
-                    //         final displayImageUrl =
-                    //             (localImageUrl != null &&
-                    //                 localImageUrl.isNotEmpty)
-                    //             ? localImageUrl
-                    //             : (remoteImageUrl != null &&
-                    //                   remoteImageUrl.isNotEmpty)
-                    //             ? remoteImageUrl
-                    //             : null;
-                    //
-                    //         if (displayImageUrl != null) {
-                    //           return ClipOval(
-                    //             child: CachedNetworkImage(
-                    //               imageUrl: displayImageUrl,
-                    //               fit: BoxFit.cover,
-                    //               width: 0.25.sw,
-                    //               height: 0.25.sw,
-                    //               errorWidget: (context, url, error) =>
-                    //                   const Icon(Icons.person, size: 40),
-                    //             ),
-                    //           );
-                    //         } else {
-                    //           return const Icon(Icons.person, size: 40);
-                    //         }
-                    //       },
-                    //     ),
-                    //   ),
-                    //   accountEmail: Text(authProvider.email),
-                    //   accountName: Text(
-                    //     authProvider.currentUser?.username ??
-                    //         HiveService.formUserName ??
-                    //         authProvider.userName ??
-                    //         "User",
-                    //   ),
-                    // ),
+                    child: UserAccountsDrawerHeader(
+                      currentAccountPictureSize: Size(0.25.sw, 0.25.sw),
+                      currentAccountPicture: CircleAvatar(
+                        child: Builder(
+                          builder: (context) {
+                            return ClipOval(
+                              child: Image.network(
+                                context.readAuthProvider.user!.photoURL ??
+                                    context
+                                        .readAuthProvider
+                                        .userData!
+                                        .imageUrl ??
+                                    "",
+                                fit: BoxFit.cover,
+                                width: 0.25.sw,
+                                height: 0.25.sw,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      accountEmail: Text(context.readAuthProvider.user!.email!),
+                      accountName: Text(
+                        context.readAuthProvider.user!.displayName ??
+                            context.readAuthProvider.userData!.username,
+                      ),
+                      decoration: BoxDecoration(color: AppStyles.primary),
+                    ),
                   ),
                   ListTile(
                     trailing: Icon(Icons.arrow_forward_ios),
@@ -105,7 +91,7 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                     title: const Text(' Edit Profile '),
                     onTap: () {
                       AppRouter.back(context);
-                      // AppRouter.to(context, EditProfileScreen());
+                      AppRouter.to(context, EditProfileScreen());
                     },
                   ),
                   // if (authProvider.currentUser?.role == AppStatus.kSuperAdmin)
@@ -157,8 +143,7 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                               ),
                               TextButton(
                                 onPressed: () async {
-                                  // AppRouter.offAll(context, LoginScreen());
-                                  // await authProvider.signOut();
+                                  context.readAuthProvider.signOut(context);
                                 },
                                 child: Text("yes"),
                               ),

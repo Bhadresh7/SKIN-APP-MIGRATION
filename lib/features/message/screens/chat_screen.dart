@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
+import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
 import 'package:skin_app_migration/features/message/widgets/message_text_field.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -42,23 +44,46 @@ class _ChatScreenState extends State<ChatScreen> {
         body: Column(
           children: [
             Expanded(
-              child: StreamBuilder(
+              child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('chats')
+                    .orderBy('ts', descending: true)
                     .snapshots(),
                 builder: (context, asyncSnapshot) {
+                  if (asyncSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!asyncSnapshot.hasData ||
+                      asyncSnapshot.data!.docs.isEmpty) {
+                    return Center(child: Text('No messages yet.'));
+                  }
+
+                  final chatDocs = asyncSnapshot.data!.docs;
+
                   return ListView.builder(
+                    reverse: true,
+                    itemCount: chatDocs.length,
                     itemBuilder: (BuildContext context, int index) {
+                      final messageData =
+                          chatDocs[index].data() as Map<String, dynamic>;
+                      final messageText = messageData['metadata']['text']
+                          .toString();
+                      final senderId = messageData['id'];
+
                       return Padding(
-                        padding: EdgeInsetsGeometry.all(20),
-                        child: Container(
-                          height: 50,
-                          width: 100,
-                          color: Colors.blue,
+                        padding: const EdgeInsets.all(12.0),
+                        child: ChatBubble(
+                          message: messageText,
+                          isSender:
+                              context.readAuthProvider.user?.uid == senderId,
+                          avatarUrl:
+                              context.readAuthProvider.user?.photoURL ??
+                              context.readAuthProvider.userData!.imageUrl!,
                         ),
                       );
                     },
-                    itemCount: 10,
                   );
                 },
               ),

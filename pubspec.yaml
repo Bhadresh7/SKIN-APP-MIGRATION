@@ -41,6 +41,9 @@ dependencies:
   #state management
   provider: ^6.1.5
 
+  #  internet image
+  cached_network_image: ^3.4.1
+
 
   #date package
   intl: ^0.20.2
