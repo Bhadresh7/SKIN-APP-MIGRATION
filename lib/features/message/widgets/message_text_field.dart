@@ -119,15 +119,15 @@ class _MessageTextFieldState extends State<MessageTextField> {
                   IconButton(
                     onPressed: () async {
                       // INTERNET CONNECTION CHECK TOAST
-                      if (context.readInternetProvider.connectionStatus ==
-                          AppStatus.kDisconnected) {
-                        ToastHelper.showErrorToast(
-                          context: context,
-                          message: "Check internet connection",
-                        );
-
-                        return;
-                      }
+                      // if (context.readInternetProvider.connectionStatus ==
+                      //     AppStatus.kDisconnected) {
+                      //   ToastHelper.showErrorToast(
+                      //     context: context,
+                      //     message: "Check internet connection",
+                      //   );
+                      //
+                      //   return;
+                      // }
 
                       // MESSAGE
                       final message = ChatMessageModel(

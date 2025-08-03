@@ -17,11 +17,11 @@ class LocalDBService {
   Future<void> init() async {
     try {
       final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'chat_data.db'); // ✅ custom name
+      final path = join(dbPath, 'chat_data.db');
 
       _db = await openDatabase(
         path,
-        version: 2, // Increment when schema changes
+        version: 2,
         onCreate: (db, version) async {
           AppLoggerHelper.logInfo('Creating initial tables...');
           await _createTables(db);
@@ -79,7 +79,7 @@ class LocalDBService {
 
   // ===== ChatMessageModel CRUD =====
 
-  //  Inset Messages
+  /// Insert chat message (main method)
   Future<void> insertChatMessage(ChatMessageModel message) async {
     final db = database;
     await db.insert(
@@ -87,9 +87,15 @@ class LocalDBService {
       message.toJson()..['metadata'] = jsonEncode(message.metadata?.toJson()),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    AppLoggerHelper.logInfo('Inserted message ${message.senderId}');
   }
 
-  // Get All Messages
+  /// ✅ Alias method for compatibility with ChatProvider
+  Future<void> insertMessage(ChatMessageModel message) async {
+    await insertChatMessage(message);
+  }
+
+  /// Get all stored chat messages
   Future<List<ChatMessageModel>> getAllMessages() async {
     final db = database;
     final result = await db.query('chat_messages', orderBy: 'ts ASC');
