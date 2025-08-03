@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
+import 'package:skin_app_migration/core/service/local_db_service.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_login_screen.dart';
 import 'package:skin_app_migration/features/auth/screens/email_verification_screen.dart';
 import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
@@ -35,6 +36,7 @@ class MyAuthProvider extends ChangeNotifier {
 
     try {
       // Get current user without network call first
+      await LocalDBService().init();
       user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
@@ -96,14 +98,19 @@ class MyAuthProvider extends ChangeNotifier {
         print("User data does not exist");
         AppRouter.replace(context, BasicUserDetailsFormScreen());
       } else {
-        userData = UsersModel.fromFirestore(tempData.data()! as Map<String, dynamic>);
+        userData = UsersModel.fromFirestore(
+          tempData.data()! as Map<String, dynamic>,
+        );
 
         if (!userData!.isGoogle! && userData!.imageUrl == null) {
           AppRouter.replace(context, ImageSetupScreen());
         } else {
           // Initialize chat provider only after successful auth
           try {
-            final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+            final chatProvider = Provider.of<ChatProvider>(
+              context,
+              listen: false,
+            );
             chatProvider.initializeSharingIntent(context);
             chatProvider.initIntentHandling();
           } catch (e) {
@@ -149,7 +156,9 @@ class MyAuthProvider extends ChangeNotifier {
               .get();
 
           if (userDoc.exists) {
-            userData = UsersModel.fromFirestore(userDoc.data()! as Map<String, dynamic>);
+            userData = UsersModel.fromFirestore(
+              userDoc.data()! as Map<String, dynamic>,
+            );
           }
         } catch (e) {
           print("Error fetching user data after login: $e");
@@ -192,7 +201,8 @@ class MyAuthProvider extends ChangeNotifier {
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -276,7 +286,6 @@ class MyAuthProvider extends ChangeNotifier {
       _setLoadingState(false);
       notifyListeners();
       return AppStatus.kSuccess;
-
     } on FirebaseAuthException catch (e) {
       _setLoadingState(false);
       notifyListeners();

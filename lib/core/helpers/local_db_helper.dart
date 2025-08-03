@@ -1,30 +1,29 @@
 import 'dart:convert';
 
 import 'package:path/path.dart';
-import 'package:skin_app_migration/core/helpers/app_logger.dart';
-import 'package:skin_app_migration/core/helpers/local_db_helper.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
 import 'package:sqflite/sqflite.dart';
 
-class LocalDBService {
-  static final LocalDBService _instance = LocalDBService._internal();
+import 'app_logger.dart';
 
-  factory LocalDBService() => _instance;
+class LocalDbHelper {
+  static final LocalDbHelper _instance = LocalDbHelper._internal();
 
-  LocalDBService._internal();
+  factory LocalDbHelper() => _instance;
+
+  LocalDbHelper._internal();
 
   Database? _db;
 
   /// Initialize SQLite DB with custom filename 'chat_data.db'
   Future<void> init() async {
     try {
-      await LocalDbHelper().init();
       final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'chat_data.db');
+      final path = join(dbPath, 'chat_data.db'); // ✅ custom name
 
       _db = await openDatabase(
         path,
-        version: 2,
+        version: 2, // Increment when schema changes
         onCreate: (db, version) async {
           AppLoggerHelper.logInfo('Creating initial tables...');
           await _createTables(db);
@@ -75,16 +74,14 @@ class LocalDBService {
 
   Database get database {
     if (_db == null) {
-      throw Exception(
-        'Database not initialized. Call init() first From Service.',
-      );
+      throw Exception('Database not initialized. Call init() first.');
     }
     return _db!;
   }
 
   // ===== ChatMessageModel CRUD =====
 
-  /// Insert chat message (main method)
+  //  Inset Messages
   Future<void> insertChatMessage(ChatMessageModel message) async {
     final db = database;
     await db.insert(
@@ -92,25 +89,22 @@ class LocalDBService {
       message.toJson()..['metadata'] = jsonEncode(message.metadata?.toJson()),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    AppLoggerHelper.logInfo('Inserted message ${message.senderId}');
   }
 
-  /// ✅ Alias method for compatibility with ChatProvider
-  Future<void> insertMessage(ChatMessageModel message) async {
-    await insertChatMessage(message);
-  }
-
-  /// Get all stored chat messages
+  // Get All Messages
   Future<List<ChatMessageModel>> getAllMessages() async {
     final db = database;
-    final result = await db.query('chat_messages', orderBy: 'ts ASC');
+    final result = await db.query(
+      'chat_messages',
+      orderBy: 'ts ASC',
+      limit: 10,
+    );
 
     return result.map((map) {
       final metadataJson = map['metadata'] as String?;
       return ChatMessageModel.fromJson({
         'id': map['id'],
         'name': map['name'],
-        'ts': map['ts'],
         'metadata': metadataJson != null ? jsonDecode(metadataJson) : null,
       });
     }).toList();

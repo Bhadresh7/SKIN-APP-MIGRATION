@@ -11,12 +11,10 @@ import 'package:skin_app_migration/features/message/models/meta_model.dart';
 
 class ImagePreviewScreen extends StatefulWidget {
   final File image;
-  final Function(String) onSend;
   final String? initialText; // Add this parameter
 
   const ImagePreviewScreen({
     required this.image,
-    required this.onSend,
     this.initialText, // Make it optional
     super.key,
   });

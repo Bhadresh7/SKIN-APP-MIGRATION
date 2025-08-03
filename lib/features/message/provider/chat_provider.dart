@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
 import 'package:receive_intent/receive_intent.dart' as receive_intent;
-import 'package:skin_app_migration/core/helpers/app_logger_helper.dart';
 import 'package:skin_app_migration/core/service/local_db_service.dart';
 
+import '../../../core/helpers/app_logger.dart' show AppLoggerHelper;
 import '../models/chat_message_model.dart';
 import '../screens/image_preview_screen.dart';
 
@@ -30,7 +31,9 @@ class ChatProvider extends ChangeNotifier {
 
   // Public getters
   List<ChatMessageModel> get messages => _messages;
+
   bool get isLoadingMetadata => _isLoadingMetadata;
+
   String? get imageMetadata => _imageMetadata;
 
   // ==== SHARING INTENT HANDLING ====
@@ -41,22 +44,29 @@ class ChatProvider extends ChangeNotifier {
 
       _sharingIntentSubscription = FlutterSharingIntent.instance
           .getMediaStream()
-          .listen((List<SharedFile> files) {
-        AppLoggerHelper.logInfo('Received ${files.length} shared files from media stream');
-        _updateSharedFiles(files, context);
-      }, onError: (err) {
-        AppLoggerHelper.logError("Error in getMediaStream: $err");
-      });
+          .listen(
+            (List<SharedFile> files) {
+              AppLoggerHelper.logInfo(
+                'Received ${files.length} shared files from media stream',
+              );
+              _updateSharedFiles(files, context);
+            },
+            onError: (err) {
+              AppLoggerHelper.logError("Error in getMediaStream: $err");
+            },
+          );
 
       FlutterSharingIntent.instance
           .getInitialSharing()
           .then((files) {
-        AppLoggerHelper.logInfo('Received ${files.length} files from initial sharing');
-        _updateSharedFiles(files, context);
-      })
+            AppLoggerHelper.logInfo(
+              'Received ${files.length} files from initial sharing',
+            );
+            _updateSharedFiles(files, context);
+          })
           .catchError((err) {
-        AppLoggerHelper.logError("Error in getInitialSharing: $err");
-      });
+            AppLoggerHelper.logError("Error in getInitialSharing: $err");
+          });
 
       AppLoggerHelper.logInfo('Sharing intent initialized successfully');
     } catch (e) {
@@ -68,7 +78,9 @@ class ChatProvider extends ChangeNotifier {
     try {
       final newSharedValues = files.map((file) => file.value ?? "").toList();
 
-      AppLoggerHelper.logInfo('Updating shared files. New values: $newSharedValues');
+      AppLoggerHelper.logInfo(
+        'Updating shared files. New values: $newSharedValues',
+      );
 
       if (sharedValues != newSharedValues) {
         sharedFiles = files;
@@ -78,7 +90,9 @@ class ChatProvider extends ChangeNotifier {
         // Check if files list is not empty before accessing
         if (files.isNotEmpty) {
           final firstFile = files[0];
-          AppLoggerHelper.logInfo('Processing first shared file: ${firstFile.type}');
+          AppLoggerHelper.logInfo(
+            'Processing first shared file: ${firstFile.type}',
+          );
 
           if (firstFile.type == SharedMediaType.TEXT) {
             messageController.text = firstFile.value ?? "";
@@ -86,7 +100,9 @@ class ChatProvider extends ChangeNotifier {
           } else if (firstFile.type == SharedMediaType.IMAGE) {
             final imagePath = firstFile.value;
             if (imagePath != null && imagePath.isNotEmpty) {
-              AppLoggerHelper.logInfo('Navigating to image preview for: $imagePath');
+              AppLoggerHelper.logInfo(
+                'Navigating to image preview for: $imagePath',
+              );
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -200,7 +216,9 @@ class ChatProvider extends ChangeNotifier {
           .map((m) => '${m.senderId}_${m.createdAt}')
           .toSet();
 
-      AppLoggerHelper.logInfo('Loaded ${_messages.length} messages from local DB');
+      AppLoggerHelper.logInfo(
+        'Loaded ${_messages.length} messages from local DB',
+      );
       notifyListeners();
     } catch (e) {
       AppLoggerHelper.logError('Failed to load messages: $e');
@@ -224,14 +242,23 @@ class ChatProvider extends ChangeNotifier {
   }
 
   // Safe method to create ChatMessageModel from Firestore data
-  ChatMessageModel? _createMessageFromFirestoreData(Map<String, dynamic> data, String docId) {
+  ChatMessageModel? _createMessageFromFirestoreData(
+    Map<String, dynamic> data,
+    String docId,
+  ) {
     try {
       // Validate required fields and provide defaults for null values
       final messageData = <String, dynamic>{
         'id': data['id'] ?? docId, // Use document ID as fallback
         'senderId': data['senderId'] ?? data['id'] ?? docId,
-        'createdAt': data['createdAt'] ?? data['ts'] ?? DateTime.now().millisecondsSinceEpoch,
-        'timestamp': data['timestamp'] ?? data['ts'] ?? DateTime.now().millisecondsSinceEpoch,
+        'createdAt':
+            data['createdAt'] ??
+            data['ts'] ??
+            DateTime.now().millisecondsSinceEpoch,
+        'timestamp':
+            data['timestamp'] ??
+            data['ts'] ??
+            DateTime.now().millisecondsSinceEpoch,
         'name': data['name'] ?? 'Unknown User',
         'metadata': data['metadata'] ?? {},
       };
@@ -245,7 +272,9 @@ class ChatProvider extends ChangeNotifier {
 
       return ChatMessageModel.fromJson(messageData);
     } catch (e) {
-      AppLoggerHelper.logError('Error creating message from Firestore data: $e');
+      AppLoggerHelper.logError(
+        'Error creating message from Firestore data: $e',
+      );
       AppLoggerHelper.logError('Document ID: $docId');
       AppLoggerHelper.logError('Raw data: $data');
       return null;
@@ -261,58 +290,78 @@ class ChatProvider extends ChangeNotifier {
           .collection('chats')
           .orderBy('ts')
           .snapshots()
-          .listen((QuerySnapshot snapshot) async {
-        try {
-          AppLoggerHelper.logInfo('Received Firestore snapshot with ${snapshot.docs.length} documents');
+          .listen(
+            (QuerySnapshot snapshot) async {
+              try {
+                AppLoggerHelper.logInfo(
+                  'Received Firestore snapshot with ${snapshot.docs.length} documents',
+                );
 
-          final localMessages = await LocalDBService().getAllMessages();
-          final lastLocalTimestamp = localMessages.isNotEmpty
-              ? localMessages.map((m) => m.timestamp).reduce(max)
-              : 0;
+                final localMessages = await LocalDBService().getAllMessages();
+                final lastLocalTimestamp = localMessages.isNotEmpty
+                    ? localMessages.map((m) => m.timestamp).reduce(max)
+                    : 0;
 
-          AppLoggerHelper.logInfo('Last local timestamp: $lastLocalTimestamp');
+                AppLoggerHelper.logInfo(
+                  'Last local timestamp: $lastLocalTimestamp',
+                );
 
-          int newMessagesCount = 0;
-          int skippedCount = 0;
+                int newMessagesCount = 0;
+                int skippedCount = 0;
 
-          for (var doc in snapshot.docs) {
-            try {
-              final data = doc.data() as Map<String, dynamic>;
-              final remoteMessage = _createMessageFromFirestoreData(data, doc.id);
+                for (var doc in snapshot.docs) {
+                  try {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final remoteMessage = _createMessageFromFirestoreData(
+                      data,
+                      doc.id,
+                    );
 
-              if (remoteMessage == null) {
-                skippedCount++;
-                AppLoggerHelper.logInfo('Skipping document ${doc.id} due to parsing error');
-                continue;
-              }
+                    if (remoteMessage == null) {
+                      skippedCount++;
+                      AppLoggerHelper.logInfo(
+                        'Skipping document ${doc.id} due to parsing error',
+                      );
+                      continue;
+                    }
 
-              if (remoteMessage.timestamp > lastLocalTimestamp) {
-                final exists = localMessages.any((m) => m.id == remoteMessage.id);
-                if (!exists) {
-                  await LocalDBService().insertMessage(remoteMessage);
-                  newMessagesCount++;
+                    if (remoteMessage.timestamp > lastLocalTimestamp) {
+                      final exists = localMessages.any(
+                        (m) => m.id == remoteMessage.id,
+                      );
+                      if (!exists) {
+                        await LocalDBService().insertMessage(remoteMessage);
+                        newMessagesCount++;
+                      }
+                    }
+                  } catch (e) {
+                    skippedCount++;
+                    AppLoggerHelper.logError(
+                      'Error processing document ${doc.id}: $e',
+                    );
+                  }
                 }
+
+                if (newMessagesCount > 0) {
+                  AppLoggerHelper.logInfo(
+                    'Processed $newMessagesCount new messages',
+                  );
+                  await loadMessages(); // Reload local DB to reflect new additions
+                }
+
+                if (skippedCount > 0) {
+                  AppLoggerHelper.logInfo(
+                    'Skipped $skippedCount documents due to errors',
+                  );
+                }
+              } catch (e) {
+                AppLoggerHelper.logError('Error in Firestore listener: $e');
               }
-            } catch (e) {
-              skippedCount++;
-              AppLoggerHelper.logError('Error processing document ${doc.id}: $e');
-            }
-          }
-
-          if (newMessagesCount > 0) {
-            AppLoggerHelper.logInfo('Processed $newMessagesCount new messages');
-            await loadMessages(); // Reload local DB to reflect new additions
-          }
-
-          if (skippedCount > 0) {
-            AppLoggerHelper.logInfo('Skipped $skippedCount documents due to errors');
-          }
-        } catch (e) {
-          AppLoggerHelper.logError('Error in Firestore listener: $e');
-        }
-      }, onError: (error) {
-        AppLoggerHelper.logError('Firestore listener error: $error');
-      });
+            },
+            onError: (error) {
+              AppLoggerHelper.logError('Firestore listener error: $error');
+            },
+          );
 
       AppLoggerHelper.logInfo('Firestore listener started successfully');
     } catch (e) {
@@ -327,7 +376,9 @@ class ChatProvider extends ChangeNotifier {
 
       final localMessages = await LocalDBService().getAllMessages();
       final lastLocalTs = localMessages.isNotEmpty
-          ? localMessages.map((m) => m.createdAt).reduce((a, b) => a > b ? a : b)
+          ? localMessages
+                .map((m) => m.createdAt)
+                .reduce((a, b) => a > b ? a : b)
           : 0;
 
       AppLoggerHelper.logInfo('Syncing messages newer than: $lastLocalTs');
@@ -338,7 +389,9 @@ class ChatProvider extends ChangeNotifier {
           .orderBy('ts')
           .get();
 
-      AppLoggerHelper.logInfo('Found ${querySnapshot.docs.length} new messages to sync');
+      AppLoggerHelper.logInfo(
+        'Found ${querySnapshot.docs.length} new messages to sync',
+      );
 
       int syncedCount = 0;
       int skippedCount = 0;
@@ -363,7 +416,9 @@ class ChatProvider extends ChangeNotifier {
       _messages = await LocalDBService().getAllMessages();
       notifyListeners();
 
-      AppLoggerHelper.logInfo('Firestore sync completed. Synced $syncedCount messages');
+      AppLoggerHelper.logInfo(
+        'Firestore sync completed. Synced $syncedCount messages',
+      );
       if (skippedCount > 0) {
         AppLoggerHelper.logInfo('Skipped $skippedCount messages due to errors');
       }

@@ -20,7 +20,6 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
-
   final List<DocumentSnapshot> _chatDocs = [];
   DocumentSnapshot? _lastDocument;
   bool _isLoading = false;
@@ -29,10 +28,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void initState() {
-    messageController = TextEditingController();
     super.initState();
     _loadMessages();
+    _setupScrollListener();
+  }
 
+  void _setupScrollListener() {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels <=
               _scrollController.position.minScrollExtent + 50 &&
@@ -43,23 +44,19 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-
   Future<void> _loadMessages() async {
     if (_isLoading || !_hasMore) return;
 
     setState(() => _isLoading = true);
 
     try {
-      // First, try to sync with provider's local messages
+      // Sync with provider's local messages first
       final chatProvider = context.read<ChatProvider>();
       await chatProvider.syncNewMessagesFromFirestore();
 
       Query query = FirebaseFirestore.instance
           .collection('chats')
-          .orderBy(
-            'ts',
-            descending: true,
-          )
+          .orderBy('ts', descending: true)
           .limit(_limit);
 
       if (_lastDocument != null) {
@@ -70,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (querySnapshot.docs.isNotEmpty) {
         setState(() {
-          _chatDocs.insertAll(0, querySnapshot.docs); // prepend messages
+          _chatDocs.insertAll(0, querySnapshot.docs);
           _lastDocument = querySnapshot.docs.last;
         });
 
@@ -102,55 +99,10 @@ class _ChatScreenState extends State<ChatScreen> {
           return KBackgroundScaffold(
             margin: const EdgeInsets.all(0),
             showDrawer: true,
-            appBar: AppBar(
-              toolbarHeight: 0.09.sh,
-              title: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  CircleAvatar(
-                    radius: 0.03.sh,
-                    child: Image.asset(AppAssets.logo),
-                  ),
-                  SizedBox(width: 0.02.sw),
-                  // Show loading indicator when provider is loading metadata
-                  if (chatProvider.isLoadingMetadata)
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                ],
-              ),
-            ),
+            appBar: _buildAppBar(chatProvider),
             body: Column(
               children: [
-                // Show metadata preview if available
-                if (chatProvider.imageMetadata != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Shared: ${chatProvider.imageMetadata}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: chatProvider.clearMetadata,
-                          icon: const Icon(Icons.close, size: 16),
-                        ),
-                      ],
-                    ),
-                  ),
+                _buildMetadataPreview(chatProvider),
                 Expanded(child: _buildMessagesList(chatProvider)),
                 MessageTextField(
                   messageController: chatProvider.messageController,
@@ -161,18 +113,68 @@ class _ChatScreenState extends State<ChatScreen> {
         },
       ),
     );
-                        }
+  }
+
+  PreferredSizeWidget _buildAppBar(ChatProvider chatProvider) {
+    return AppBar(
+      toolbarHeight: 0.09.sh,
+      title: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          CircleAvatar(radius: 0.03.sh, child: Image.asset(AppAssets.logo)),
+          SizedBox(width: 0.02.sw),
+          if (chatProvider.isLoadingMetadata)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataPreview(ChatProvider chatProvider) {
+    if (chatProvider.imageMetadata == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Shared: ${chatProvider.imageMetadata}',
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            onPressed: chatProvider.clearMetadata,
+            icon: const Icon(Icons.close, size: 16),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildMessagesList(ChatProvider chatProvider) {
-    // Combine provider messages with paginated messages
     final providerMessages = chatProvider.messages;
     final hasProviderMessages = providerMessages.isNotEmpty;
 
     if (_chatDocs.isEmpty && !hasProviderMessages) {
       return const Center(child: Text('No messages yet.'));
-                        }
+    }
 
-                        return ListView.builder(
+    return ListView.builder(
       controller: _scrollController,
       reverse: false,
       itemCount: _calculateItemCount(hasProviderMessages),
@@ -182,11 +184,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   int _calculateItemCount(bool hasProviderMessages) {
-    int count = _chatDocs.length + 1; // +1 for loading indicator
-
-    // Add provider messages that aren't already in _chatDocs
-    // This prevents duplication while showing local messages immediately
-    return count;
+    // +1 for loading indicator at the top
+    return _chatDocs.length + 1;
   }
 
   Widget _buildMessageItem(
@@ -202,27 +201,14 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: EdgeInsets.all(8.0),
               child: Center(child: CircularProgressIndicator()),
             )
-          : const SizedBox();
+          : const SizedBox.shrink();
     }
 
     // Build message from Firestore docs
     final docIndex = index - 1;
     if (docIndex < _chatDocs.length) {
       final messageData = _chatDocs[docIndex].data() as Map<String, dynamic>;
-      final metadata = MetaModel.fromJson(messageData['metadata']);
-      final senderId = messageData['id'];
-      final timestamp =
-          messageData['ts'] ?? DateTime.now().millisecondsSinceEpoch;
-
-      final chatMessage = ChatMessageModel(
-        metadata: metadata,
-        senderId: senderId,
-        createdAt: timestamp,
-        name:
-            context.readAuthProvider.user?.displayName ??
-            context.readAuthProvider.userData?.username ??
-            'Unknown',
-      );
+      final chatMessage = _createChatMessage(messageData);
 
       return Padding(
         padding: const EdgeInsets.all(12.0),
@@ -230,14 +216,23 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
 
-    return const SizedBox();
-                },
-              ),
-            ),
-            MessageTextField(messageController: messageController),
-          ],
-        ),
-      ),
+    return const SizedBox.shrink();
+  }
+
+  ChatMessageModel _createChatMessage(Map<String, dynamic> messageData) {
+    final metadata = MetaModel.fromJson(messageData['metadata']);
+    final senderId = messageData['id'];
+    final timestamp =
+        messageData['ts'] ?? DateTime.now().millisecondsSinceEpoch;
+
+    return ChatMessageModel(
+      metadata: metadata,
+      senderId: senderId,
+      createdAt: timestamp,
+      name:
+          context.readAuthProvider.user?.displayName ??
+          context.readAuthProvider.userData?.username ??
+          'Unknown',
     );
   }
 }

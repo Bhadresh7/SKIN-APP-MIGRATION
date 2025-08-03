@@ -157,7 +157,7 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
                       print(emailController.text);
                       print(passwordController.text);
 
-                      if (context.readInternetProvider.connectionStatus ==
+                      if (context.readInternetProvider.connectivityStatus ==
                           AppStatus.kDisconnected) {
                         print("Please connect to internet");
                       }
