@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
@@ -79,9 +80,6 @@ class _MessageTextFieldState extends State<MessageTextField> {
                           ImagePreviewScreen(
                             image:
                                 context.readImagePickerProvider.selectedImage!,
-                            onSend: (e) {
-                              print(e);
-                            },
                           ),
                         );
                       }

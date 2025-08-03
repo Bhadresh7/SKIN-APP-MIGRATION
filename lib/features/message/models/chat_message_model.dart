@@ -32,6 +32,10 @@ class ChatMessageModel {
     };
   }
 
+  int get timestamp => createdAt;
+
+  String get id => senderId;
+
   @override
   String toString() {
     return 'ChatMessageModel{ createdAt: $createdAt}';
