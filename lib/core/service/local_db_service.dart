@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:path/path.dart';
 import 'package:skin_app_migration/core/helpers/app_logger.dart';
-import 'package:skin_app_migration/core/helpers/local_db_helper.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -18,7 +17,6 @@ class LocalDBService {
   /// Initialize SQLite DB with custom filename 'chat_data.db'
   Future<void> init() async {
     try {
-      await LocalDbHelper().init();
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'chat_data.db');
 
@@ -75,9 +73,7 @@ class LocalDBService {
 
   Database get database {
     if (_db == null) {
-      throw Exception(
-        'Database not initialized. Call init() first From Service.',
-      );
+      throw Exception('Database not initialized. Call init() first.');
     }
     return _db!;
   }

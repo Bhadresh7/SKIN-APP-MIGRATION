@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class SpecificUserDetailsScreen extends StatelessWidget {
-  const SpecificUserDetailsScreen({super.key});
+  final String email;
+
+  const SpecificUserDetailsScreen({super.key, required this.email});
 
   @override
   Widget build(BuildContext context) {

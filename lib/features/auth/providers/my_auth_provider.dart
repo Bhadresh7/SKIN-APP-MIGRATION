@@ -160,6 +160,9 @@ class MyAuthProvider extends ChangeNotifier {
               userDoc.data()! as Map<String, dynamic>,
             );
           }
+          if (userData!.isBlocked) {
+            return AppStatus.kBlocked;
+          }
         } catch (e) {
           print("Error fetching user data after login: $e");
           // Continue without user data, will be handled in initialize

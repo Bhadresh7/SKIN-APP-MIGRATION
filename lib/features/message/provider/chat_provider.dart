@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
 import 'package:receive_intent/receive_intent.dart' as receive_intent;
+import 'package:skin_app_migration/core/helpers/app_logger.dart';
 import 'package:skin_app_migration/core/service/local_db_service.dart';
 
-import '../../../core/helpers/app_logger.dart' show AppLoggerHelper;
 import '../models/chat_message_model.dart';
 import '../screens/image_preview_screen.dart';
 
@@ -31,9 +31,7 @@ class ChatProvider extends ChangeNotifier {
 
   // Public getters
   List<ChatMessageModel> get messages => _messages;
-
   bool get isLoadingMetadata => _isLoadingMetadata;
-
   String? get imageMetadata => _imageMetadata;
 
   // ==== SHARING INTENT HANDLING ====

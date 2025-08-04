@@ -44,6 +44,7 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
 
   ///formKey
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
   void getAuthBaseScreen(BuildContext context, String result) {
     switch (result) {
       case AppStatus.kBlocked:
@@ -51,14 +52,48 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text("Account Disabled"),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Column(
+                children: [
+                  Icon(Icons.block, color: Colors.red, size: 48),
+                  SizedBox(height: 16),
+                  Text(
+                    "Account Blocked",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
               content: Text(
-                "Your account has been disabled. Please contact support.",
+                "Your account has been blocked and you cannot access the chat. Please contact support for more information.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => AppRouter.back(context),
-                  child: Text("OK"),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      AppRouter.back(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text("OK"),
+                  ),
                 ),
               ],
             );
@@ -170,7 +205,6 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
                           );
 
                       getAuthBaseScreen(context, result);
-                      // print("=========================$result");
                     }
                   }
                 },

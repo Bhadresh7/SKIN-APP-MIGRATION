@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
-import 'package:skin_chat_app/constants/app_assets.dart';
-import 'package:skin_chat_app/constants/app_status.dart';
-import 'package:skin_chat_app/constants/app_styles.dart';
-import 'package:skin_chat_app/helpers/my_navigation.dart';
-import 'package:skin_chat_app/providers/super_admin/super_admin_provider_2.dart';
-import 'package:skin_chat_app/screens/profile/user_details_screen.dart';
+import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/constants/app_status.dart';
+import 'package:skin_app_migration/core/router/app_router.dart';
+import 'package:skin_app_migration/core/theme/app_styles.dart';
+import 'package:skin_app_migration/features/super_admin/provider/super_admin_provider.dart';
+import 'package:skin_app_migration/features/super_admin/screens/specific_user_details_screen.dart';
 
 class UserListView extends StatefulWidget {
   final String filter;
@@ -46,19 +46,19 @@ class _UserListViewState extends State<UserListView> {
 
   void _initAndLoadUsers() {
     // Initialize and load users when the widget is first created
-    final provider = Provider.of<SuperAdminProvider2>(context, listen: false);
+    final provider = Provider.of<SuperAdminProvider>(context, listen: false);
     provider.initUsers(widget.filter);
   }
 
   void _handleFilterChange() {
     // Change filter when the filter prop changes
-    final provider = Provider.of<SuperAdminProvider2>(context, listen: false);
+    final provider = Provider.of<SuperAdminProvider>(context, listen: false);
     provider.changeFilter(widget.filter);
   }
 
   void _onScroll() {
     // Handle pagination when scrolling to the bottom
-    final provider = Provider.of<SuperAdminProvider2>(context, listen: false);
+    final provider = Provider.of<SuperAdminProvider>(context, listen: false);
     provider.onScroll(_scrollController);
   }
 
@@ -75,7 +75,9 @@ class _UserListViewState extends State<UserListView> {
         content: Text(message),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -97,7 +99,7 @@ class _UserListViewState extends State<UserListView> {
     required String role,
     required String email,
   }) {
-    final provider = Provider.of<SuperAdminProvider2>(context, listen: false);
+    final provider = Provider.of<SuperAdminProvider>(context, listen: false);
 
     showModalBottomSheet(
       context: context,
@@ -114,7 +116,7 @@ class _UserListViewState extends State<UserListView> {
               title: Text("View User Details"),
               onTap: () {
                 Navigator.pop(context);
-                MyNavigation.to(context, UserDetailsScreen(email: email));
+                AppRouter.to(context, SpecificUserDetailsScreen(email: email));
               },
             ),
             if (!isBlocked && role == "admin") ...[
@@ -125,7 +127,8 @@ class _UserListViewState extends State<UserListView> {
                   color: canPost ? AppStyles.danger : AppStyles.green,
                 ),
                 title: Text(
-                    canPost ? "Revoke Posting Access" : "Grant Posting Access"),
+                  canPost ? "Revoke Posting Access" : "Grant Posting Access",
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _confirmAction(
@@ -180,8 +183,9 @@ class _UserListViewState extends State<UserListView> {
       child: Stack(
         children: [
           Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 2,
             color: AppStyles.smoke,
             child: InkWell(
@@ -201,28 +205,31 @@ class _UserListViewState extends State<UserListView> {
                     img.isNotEmpty
                         ? CircleAvatar(
                             radius: 50,
-                            backgroundImage: CachedNetworkImageProvider(
-                              img,
-                            ),
+                            backgroundImage: CachedNetworkImageProvider(img),
                           )
                         : CircleAvatar(
                             radius: 50,
-                            child: SvgPicture.asset(AppAssets.profile)),
+                            child: SvgPicture.asset(AppAssets.profile),
+                          ),
                     SizedBox(width: AppStyles.padding),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(name,
-                              style: TextStyle(
-                                  fontSize: AppStyles.heading,
-                                  overflow: TextOverflow.ellipsis)),
+                          Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: AppStyles.heading,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           Text(
                             email,
                             style: TextStyle(
-                                fontSize: AppStyles.bodyText,
-                                overflow: TextOverflow.ellipsis),
+                              fontSize: AppStyles.bodyText,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -234,15 +241,23 @@ class _UserListViewState extends State<UserListView> {
           ),
           if (isBlocked) _buildBadge("Blocked", Colors.red, Icons.block),
           if (role == AppStatus.kAdmin && canPost && !isBlocked)
-            _buildBadge("Admin", AppStyles.primary, null,
-                iconAsset: AppAssets.crown),
+            _buildBadge(
+              "Admin",
+              AppStyles.primary,
+              null,
+              iconAsset: AppAssets.crown,
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildBadge(String label, Color color, IconData? icon,
-      {String? iconAsset}) {
+  Widget _buildBadge(
+    String label,
+    Color color,
+    IconData? icon, {
+    String? iconAsset,
+  }) {
     return Positioned(
       top: 15.r,
       right: 15.r,
@@ -259,9 +274,13 @@ class _UserListViewState extends State<UserListView> {
                 ? Image.asset(iconAsset, width: 16.r)
                 : Icon(icon, size: 16, color: Colors.white),
             SizedBox(width: 4.w),
-            Text(label,
-                style: TextStyle(
-                    fontSize: AppStyles.bodyText, color: Colors.white)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: AppStyles.bodyText,
+                color: Colors.white,
+              ),
+            ),
           ],
         ),
       ),
@@ -270,7 +289,7 @@ class _UserListViewState extends State<UserListView> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SuperAdminProvider2>(
+    return Consumer<SuperAdminProvider>(
       builder: (context, provider, _) {
         // Show loading indicator when initially loading and users list is empty
         if (provider.isEmpty && provider.isLoading) {

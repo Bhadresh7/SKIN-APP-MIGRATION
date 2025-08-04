@@ -129,12 +129,11 @@ class _MessageTextFieldState extends State<MessageTextField> {
                         ),
                         name: context.readAuthProvider.userData!.username,
                       );
-
-                      widget.messageController.clear();
-                      _updateMaxLines();
                       await FirebaseFirestore.instance
                           .collection('chats')
                           .add(message.toJson());
+                      widget.messageController.clear();
+                      _updateMaxLines();
                     },
                     icon: Icon(Icons.send, color: AppStyles.smoke),
                   ),
