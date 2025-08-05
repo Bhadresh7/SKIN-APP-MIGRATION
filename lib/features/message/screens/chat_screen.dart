@@ -1,12 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
-import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
-import 'package:skin_app_migration/features/message/models/meta_model.dart';
 import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
 import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
 import 'package:skin_app_migration/features/message/widgets/message_text_field.dart';
@@ -21,7 +21,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessageModel> _messages = [];
-  final List<DocumentSnapshot> _documents = []; // Track documents for pagination
+  final List<DocumentSnapshot> _documents =
+      []; // Track documents for pagination
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
   static const int _pageSize = 20;
@@ -37,22 +38,24 @@ class _ChatScreenState extends State<ChatScreen> {
   void _initializeStreamPagination() {
     // Start listening to real-time messages using provider
     _startMessagesStream();
-    
+
     // Load initial messages
     _loadInitialMessages();
   }
 
   void _startMessagesStream() {
     final chatProvider = context.read<ChatProvider>();
-    
-    _messagesStream = chatProvider.getMessagesStream(limit: _pageSize).listen(
-      (List<ChatMessageModel> messages) {
-        _handleStreamUpdate(messages);
-      },
-      onError: (error) {
-        debugPrint('❌ Stream error: $error');
-      },
-    );
+
+    _messagesStream = chatProvider
+        .getMessagesStream(limit: _pageSize)
+        .listen(
+          (List<ChatMessageModel> messages) {
+            _handleStreamUpdate(messages);
+          },
+          onError: (error) {
+            debugPrint('❌ Stream error: $error');
+          },
+        );
   }
 
   void _handleStreamUpdate(List<ChatMessageModel> messages) {
@@ -61,7 +64,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.clear();
       _messages.addAll(messages);
-      
+
       // Update pagination state based on message count
       _hasMoreMessages = messages.length >= _pageSize;
     });
@@ -78,7 +81,9 @@ class _ChatScreenState extends State<ChatScreen> {
       await chatProvider.syncNewMessagesFromFirestore();
 
       // Load initial batch using provider method with document tracking
-      final result = await chatProvider.getPaginatedMessagesWithDocs(limit: _pageSize);
+      final result = await chatProvider.getPaginatedMessagesWithDocs(
+        limit: _pageSize,
+      );
 
       if (mounted) {
         setState(() {
@@ -116,16 +121,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final chatProvider = context.read<ChatProvider>();
-      
+
       // Use the last document for pagination
       final lastDocument = _documents.last;
-      
+
       final result = await chatProvider.getPaginatedMessagesWithDocs(
         startAfter: lastDocument,
         limit: _pageSize,
       );
 
-      if (mounted && (result['messages'] as List<ChatMessageModel>).isNotEmpty) {
+      if (mounted &&
+          (result['messages'] as List<ChatMessageModel>).isNotEmpty) {
         setState(() {
           _messages.addAll(result['messages'] as List<ChatMessageModel>);
           _documents.addAll(result['documents'] as List<DocumentSnapshot>);
@@ -187,7 +193,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -227,10 +235,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text(
-              'No messages yet',
-              style: TextStyle(color: Colors.grey),
-            ),
+            Text('No messages yet', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );

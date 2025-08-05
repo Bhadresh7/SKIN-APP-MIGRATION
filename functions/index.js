@@ -7,9 +7,7 @@ initializeApp();
 
 exports.notifications = onDocumentCreated(
   {
-    region: "asia-south1",
-    memory: "512MiB",
-    timeoutSeconds: 60,
+
     document: "chats/{docId}",
   },
   async (event) => {

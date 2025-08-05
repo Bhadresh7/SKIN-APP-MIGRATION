@@ -111,8 +111,15 @@ class MyAuthProvider extends ChangeNotifier {
               context,
               listen: false,
             );
+
+            // Now it's safe to call DB-related methods
             chatProvider.initializeSharingIntent(context);
             chatProvider.initIntentHandling();
+
+            await chatProvider
+                .loadMessages(); // await is optional here unless needed
+            chatProvider.startFirestoreListener();
+            await chatProvider.syncNewMessagesFromFirestore();
           } catch (e) {
             print("Error initializing chat provider: $e");
           }
