@@ -2,9 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:metadata_fetch/metadata_fetch.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/helpers/app_logger.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
+import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ChatBubble extends StatefulWidget {
@@ -68,6 +71,52 @@ class _ChatBubbleState extends State<ChatBubble> {
         bottomRight: Radius.circular(16),
         bottomLeft: Radius.circular(0),
       );
+    }
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        if (context.readAuthProvider.user!.uid == widget.chatMessage.senderId ||
+            context.readAuthProvider.userData!.role == "super_admin") {
+          return AlertDialog(
+            title: const Text('Delete Message'),
+            content: const Text(
+              'Are you sure you want to delete this message?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await _deleteMessage();
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        } else {
+          return SizedBox.shrink();
+        }
+      },
+    );
+  }
+
+  Future<void> _deleteMessage() async {
+    try {
+      final chatProvider = context.read<ChatProvider>();
+
+      // Delete from both Firebase and local SQLite
+      await chatProvider.deleteMessage(widget.chatMessage.messageId);
+      AppLoggerHelper.logWarning(widget.chatMessage.senderId);
+      AppLoggerHelper.logWarning(widget.chatMessage.messageId);
+    } catch (e) {
+      debugPrint('❌ Error deleting message: $e');
     }
   }
 
@@ -179,19 +228,22 @@ class _ChatBubbleState extends State<ChatBubble> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Flexible(
-                  child: Container(
-                    padding: isImage || isUrl
-                        ? const EdgeInsets.all(6)
-                        : const EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 14,
-                          ),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: getBubbleRadius(),
+                  child: GestureDetector(
+                    onLongPress: isSender ? _showDeleteDialog : null,
+                    child: Container(
+                      padding: isImage || isUrl
+                          ? const EdgeInsets.all(6)
+                          : const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 14,
+                            ),
+                      decoration: BoxDecoration(
+                        color: bubbleColor,
+                        borderRadius: getBubbleRadius(),
+                      ),
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: content,
                     ),
-                    constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: content,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -223,19 +275,22 @@ class _ChatBubbleState extends State<ChatBubble> {
                       ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: Container(
-                    padding: isImage || isUrl
-                        ? const EdgeInsets.all(6)
-                        : const EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 14,
-                          ),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: getBubbleRadius(),
+                  child: GestureDetector(
+                    onLongPress: isSender ? _showDeleteDialog : null,
+                    child: Container(
+                      padding: isImage || isUrl
+                          ? const EdgeInsets.all(6)
+                          : const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 14,
+                            ),
+                      decoration: BoxDecoration(
+                        color: bubbleColor,
+                        borderRadius: getBubbleRadius(),
+                      ),
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: content,
                     ),
-                    constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: content,
                   ),
                 ),
               ],

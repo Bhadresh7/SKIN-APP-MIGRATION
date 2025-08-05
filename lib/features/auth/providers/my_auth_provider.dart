@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/service/local_db_service.dart';
+import 'package:skin_app_migration/core/service/push_notification_service.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_login_screen.dart';
 import 'package:skin_app_migration/features/auth/screens/email_verification_screen.dart';
 import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
@@ -19,6 +20,9 @@ class MyAuthProvider extends ChangeNotifier {
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
   TextEditingController userNameController = TextEditingController();
+
+  final PushNotificationService _notificationService =
+      PushNotificationService();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool isLoading = false;
@@ -149,6 +153,8 @@ class MyAuthProvider extends ChangeNotifier {
       if (userCredential.user != null) {
         user = userCredential.user;
 
+        await _notificationService.subscribeToUserTopic(user!.email!);
+
         if (!user!.emailVerified) {
           _setLoadingState(false);
           AppRouter.replace(context, EmailVerificationScreen());
@@ -258,8 +264,10 @@ class MyAuthProvider extends ChangeNotifier {
         email: email,
         password: password,
       );
-
       user = userCredential.user;
+
+      await _notificationService.subscribeToUserTopic(user!.email!);
+
       if (user == null) {
         _setLoadingState(false);
         notifyListeners();
@@ -314,6 +322,7 @@ class MyAuthProvider extends ChangeNotifier {
 
   Future<void> signOut(BuildContext context) async {
     try {
+      await _notificationService.unsubscribeFromUserTopic(user!.email!);
       AppRouter.offAll(context, AuthLoginScreen());
       await _auth.signOut();
       if (await GoogleSignIn().isSignedIn()) {

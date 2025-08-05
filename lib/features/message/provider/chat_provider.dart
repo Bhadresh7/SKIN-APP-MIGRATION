@@ -19,6 +19,7 @@ class ChatProvider extends ChangeNotifier {
   List<SharedFile>? sharedFiles;
   List<String> sharedValues = [];
   final TextEditingController messageController = TextEditingController();
+  LocalDBService localDBService = LocalDBService();
 
   String? _receivedText;
   bool _isLoadingMetadata = false;
@@ -209,7 +210,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       AppLoggerHelper.logInfo('Loading messages from local DB...');
 
-      _messages = await LocalDBService().getAllMessages();
+      _messages = await localDBService.getAllMessages();
       _syncedMessageIds = _messages
           .map((m) => '${m.senderId}_${m.createdAt}')
           .toSet();
@@ -228,9 +229,10 @@ class ChatProvider extends ChangeNotifier {
     try {
       AppLoggerHelper.logInfo('Adding new message to local DB...');
 
-      await LocalDBService().insertChatMessage(message);
+      await localDBService.insertChatMessage(message);
       _messages.add(message);
       _syncedMessageIds.add('${message.senderId}_${message.createdAt}');
+      AppLoggerHelper.logWarning(message.toJson().toString());
       notifyListeners();
 
       AppLoggerHelper.logInfo('New message added: ${message.metadata?.text}');
@@ -247,8 +249,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       // Validate required fields and provide defaults for null values
       final messageData = <String, dynamic>{
-        'id': data['id'] ?? docId, // Use document ID as fallback
-        'senderId': data['senderId'] ?? data['id'] ?? docId,
+        'id': data['id'] ?? docId,
+        'senderId': data['senderId'],
         'createdAt':
             data['createdAt'] ??
             data['ts'] ??
@@ -268,7 +270,7 @@ class ChatProvider extends ChangeNotifier {
         }
       }
 
-      return ChatMessageModel.fromJson(messageData);
+      return ChatMessageModel.fromJson(messageData, docId);
     } catch (e) {
       AppLoggerHelper.logError(
         'Error creating message from Firestore data: $e',
@@ -295,9 +297,9 @@ class ChatProvider extends ChangeNotifier {
                   'Received Firestore snapshot with ${snapshot.docs.length} documents',
                 );
 
-                final localMessages = await LocalDBService().getAllMessages();
+                final localMessages = await localDBService.getAllMessages();
                 final lastLocalTimestamp = localMessages.isNotEmpty
-                    ? localMessages.map((m) => m.timestamp).reduce(max)
+                    ? localMessages.map((m) => m.createdAt).reduce(max)
                     : 0;
 
                 AppLoggerHelper.logInfo(
@@ -323,12 +325,12 @@ class ChatProvider extends ChangeNotifier {
                       continue;
                     }
 
-                    if (remoteMessage.timestamp > lastLocalTimestamp) {
+                    if (remoteMessage.createdAt > lastLocalTimestamp) {
                       final exists = localMessages.any(
-                        (m) => m.id == remoteMessage.id,
+                        (m) => m.senderId == remoteMessage.senderId,
                       );
                       if (!exists) {
-                        await LocalDBService().insertMessage(remoteMessage);
+                        await localDBService.insertMessage(remoteMessage);
                         newMessagesCount++;
                       }
                     }
@@ -372,7 +374,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       AppLoggerHelper.logInfo('Starting Firestore sync...');
 
-      final localMessages = await LocalDBService().getAllMessages();
+      final localMessages = await localDBService.getAllMessages();
       final lastLocalTs = localMessages.isNotEmpty
           ? localMessages
                 .map((m) => m.createdAt)
@@ -400,7 +402,7 @@ class ChatProvider extends ChangeNotifier {
           final message = _createMessageFromFirestoreData(data, doc.id);
 
           if (message != null) {
-            await LocalDBService().insertChatMessage(message);
+            await localDBService.insertChatMessage(message);
             syncedCount++;
           } else {
             skippedCount++;
@@ -411,7 +413,7 @@ class ChatProvider extends ChangeNotifier {
         }
       }
 
-      _messages = await LocalDBService().getAllMessages();
+      _messages = await localDBService.getAllMessages();
       notifyListeners();
 
       AppLoggerHelper.logInfo(
@@ -428,18 +430,23 @@ class ChatProvider extends ChangeNotifier {
   // ==== STREAM PAGINATION SUPPORT ====
 
   // Method to get real-time messages stream for pagination
-  Stream<List<ChatMessageModel>> getMessagesStream({int limit = 20}) {
+  Stream<List<ChatMessageModel>> getMessagesStream({required int limit}) {
     return FirebaseFirestore.instance
         .collection('chats')
         .orderBy('ts', descending: true)
         .limit(limit)
         .snapshots()
         .map((QuerySnapshot snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return _createMessageFromFirestoreData(data, doc.id);
-      }).where((message) => message != null).cast<ChatMessageModel>().toList();
-    });
+          return snapshot.docs
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                AppLoggerHelper.logWarning(doc.id);
+                return _createMessageFromFirestoreData(data, doc.id);
+              })
+              .where((message) => message != null)
+              .cast<ChatMessageModel>()
+              .toList();
+        });
   }
 
   // Method to get paginated messages with document tracking
@@ -458,11 +465,15 @@ class ChatProvider extends ChangeNotifier {
       }
 
       final querySnapshot = await query.get();
-      
-      final messages = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return _createMessageFromFirestoreData(data, doc.id);
-      }).where((message) => message != null).cast<ChatMessageModel>().toList();
+
+      final messages = querySnapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return _createMessageFromFirestoreData(data, doc.id);
+          })
+          .where((message) => message != null)
+          .cast<ChatMessageModel>()
+          .toList();
 
       return {
         'messages': messages,
@@ -495,11 +506,15 @@ class ChatProvider extends ChangeNotifier {
       }
 
       final querySnapshot = await query.get();
-      
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return _createMessageFromFirestoreData(data, doc.id);
-      }).where((message) => message != null).cast<ChatMessageModel>().toList();
+
+      return querySnapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return _createMessageFromFirestoreData(data, doc.id);
+          })
+          .where((message) => message != null)
+          .cast<ChatMessageModel>()
+          .toList();
     } catch (e) {
       AppLoggerHelper.logError('Error getting paginated messages: $e');
       return [];
@@ -510,23 +525,33 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(ChatMessageModel message) async {
     try {
       AppLoggerHelper.logInfo('Sending message: ${message.metadata?.text}');
-      
-      // Add to local storage first
-      await addMessage(message);
-      
-      // Add to Firestore
-      await FirebaseFirestore.instance
+
+      // 1. Add to Firestore and get the doc reference
+      final docRef = await FirebaseFirestore.instance
           .collection('chats')
           .add(message.toJson());
-      
-      AppLoggerHelper.logInfo('Message sent successfully');
+
+      final messageWithId = ChatMessageModel(
+        messageId: docRef.id,
+        senderId: message.senderId,
+        createdAt: message.createdAt,
+        name: message.name,
+        metadata: message.metadata,
+      );
+
+      // 2. Add to local storage with doc ID
+      await addMessage(messageWithId);
+
+      AppLoggerHelper.logInfo('Message sent with ID: ${docRef.id}');
     } catch (e) {
       AppLoggerHelper.logError('Error sending message: $e');
     }
   }
 
   // Method to get document by message data
-  Future<DocumentSnapshot?> getDocumentByMessage(ChatMessageModel message) async {
+  Future<DocumentSnapshot?> getDocumentByMessage(
+    ChatMessageModel message,
+  ) async {
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('chats')
@@ -534,11 +559,25 @@ class ChatProvider extends ChangeNotifier {
           .where('id', isEqualTo: message.senderId)
           .limit(1)
           .get();
-      
+
       return querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first : null;
     } catch (e) {
       AppLoggerHelper.logError('Error getting document by message: $e');
       return null;
+    }
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    try {
+      AppLoggerHelper.logInfo('Deleting message...');
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(messageId)
+          .delete();
+
+      await localDBService.deleteMessageFromLocalDb(messageId);
+    } catch (e) {
+      AppLoggerHelper.logError('Error deleting message: $e');
     }
   }
 

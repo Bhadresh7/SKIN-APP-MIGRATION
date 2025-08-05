@@ -25,7 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
       []; // Track documents for pagination
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
-  static const int _pageSize = 20;
+  static const int _pageSize = 5;
   StreamSubscription<List<ChatMessageModel>>? _messagesStream;
 
   @override
@@ -186,7 +186,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             body: Column(
               children: [
-                // Show metadata preview if available
                 if (chatProvider.imageMetadata != null)
                   Container(
                     width: double.infinity,

@@ -134,6 +134,7 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
                             .collection('chats')
                             .add(
                               ChatMessageModel(
+                                messageId: '',
                                 metadata: MetaModel(
                                   img: downloadUrl,
                                   text: textController.text,

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:skin_app_migration/core/helpers/app_logger.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
+import 'package:skin_app_migration/features/message/models/meta_model.dart';
 import 'package:sqflite/sqflite.dart';
 
 class LocalDBService {
@@ -59,13 +60,14 @@ class LocalDBService {
   /// Creates the chat_messages table
   Future<void> _createChatMessagesTable(Database db) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        ts INTEGER,
-        metadata TEXT
-      )
-    ''');
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      messageId TEXT PRIMARY KEY,
+      senderId TEXT,
+      name TEXT,
+      ts INTEGER,
+      metadata TEXT
+    )
+  ''');
     AppLoggerHelper.logInfo('chat_messages table created or already exists.');
   }
 
@@ -83,12 +85,33 @@ class LocalDBService {
   /// Insert chat message (main method)
   Future<void> insertChatMessage(ChatMessageModel message) async {
     final db = database;
-    await db.insert(
-      'chat_messages',
-      message.toJson()..['metadata'] = jsonEncode(message.metadata?.toJson()),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    AppLoggerHelper.logInfo('Inserted message ${message.senderId}');
+    await db.insert('chat_messages', {
+      'messageId': message.messageId,
+      'senderId': message.senderId,
+      'name': message.name,
+      'ts': message.createdAt,
+      'metadata': jsonEncode(message.metadata?.toJson()),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    AppLoggerHelper.logInfo('Inserted message: ${message.toJson()}');
+  }
+
+  // Query all messages
+  Future<List<ChatMessageModel>> getAllMessages() async {
+    final db = database;
+    final result = await db.query('chat_messages', orderBy: 'ts ASC');
+
+    return result.map((map) {
+      final metadataJson = map['metadata'] as String?;
+      return ChatMessageModel(
+        messageId: map['messageId'] as String? ?? '',
+        senderId: map['senderId'] as String? ?? '',
+        name: map['name'] as String? ?? '',
+        createdAt: map['ts'] as int? ?? 0,
+        metadata: metadataJson != null
+            ? MetaModel.fromJson(jsonDecode(metadataJson))
+            : null,
+      );
+    }).toList();
   }
 
   /// ✅ Alias method for compatibility with ChatProvider
@@ -96,19 +119,16 @@ class LocalDBService {
     await insertChatMessage(message);
   }
 
-  /// Get all stored chat messages
-  Future<List<ChatMessageModel>> getAllMessages() async {
+  // delete message
+  Future<void> deleteMessageFromLocalDb(String messageId) async {
     final db = database;
-    final result = await db.query('chat_messages', orderBy: 'ts ASC');
-
-    return result.map((map) {
-      final metadataJson = map['metadata'] as String?;
-      return ChatMessageModel.fromJson({
-        'id': map['id'],
-        'name': map['name'],
-        'ts': map['ts'],
-        'metadata': metadataJson != null ? jsonDecode(metadataJson) : null,
-      });
-    }).toList();
+    final rowsDeleted = await db.delete(
+      'chat_messages',
+      where: 'messageId = ?',
+      whereArgs: [messageId],
+    );
+    AppLoggerHelper.logInfo(
+      'Deleted $rowsDeleted message(s) with id $messageId from local DB.',
+    );
   }
 }

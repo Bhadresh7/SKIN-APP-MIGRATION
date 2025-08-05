@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -8,8 +7,8 @@ import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
 import 'package:skin_app_migration/features/message/models/meta_model.dart';
-import 'package:skin_app_migration/features/message/screens/image_preview_screen.dart';
 import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
+import 'package:skin_app_migration/features/message/screens/image_preview_screen.dart';
 
 class MessageTextField extends StatefulWidget {
   final TextEditingController messageController;
@@ -51,26 +50,24 @@ class _MessageTextFieldState extends State<MessageTextField> {
     return match?.group(0);
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     if (widget.messageController.text.trim().isEmpty) return;
 
     final chatProvider = context.read<ChatProvider>();
-    
-    // Create a new message
-    final message = ChatMessageModel(
+
+    final rawMessage = ChatMessageModel(
       metadata: MetaModel(text: widget.messageController.text.trim()),
       senderId: context.readAuthProvider.user?.uid ?? 'unknown',
       createdAt: DateTime.now().millisecondsSinceEpoch,
-      name: context.readAuthProvider.user?.displayName ?? 
-            context.readAuthProvider.userData?.username ?? 
-            'Unknown',
+      name:
+          context.readAuthProvider.user?.displayName ??
+          context.readAuthProvider.userData?.username ??
+          'Unknown',
+      messageId: '',
     );
-
-    // Send the message using the new method
-    chatProvider.sendMessage(message);
-    
-    // Clear the text field
     widget.messageController.clear();
+    _updateMaxLines();
+    await chatProvider.sendMessage(rawMessage);
   }
 
   @override

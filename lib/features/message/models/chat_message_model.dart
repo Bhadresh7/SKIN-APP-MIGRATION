@@ -1,20 +1,23 @@
-import 'package:skin_app_migration/features/message/models/meta_model.dart';
+import 'meta_model.dart';
 
 class ChatMessageModel {
+  final String messageId;
   final String senderId;
   final int createdAt;
   final String name;
   final MetaModel? metadata;
+
   ChatMessageModel({
-    required this.metadata,
+    required this.messageId,
     required this.senderId,
     required this.createdAt,
     required this.name,
+    required this.metadata,
   });
 
-  /// Create from JSON
-  factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
+  factory ChatMessageModel.fromJson(Map<String, dynamic> json, String docId) {
     return ChatMessageModel(
+      messageId: docId,
       metadata: MetaModel.fromJson(json['metadata']),
       senderId: json['id'] as String,
       name: json['name'] as String,
@@ -22,7 +25,6 @@ class ChatMessageModel {
     );
   }
 
-  /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': senderId,
@@ -34,10 +36,8 @@ class ChatMessageModel {
 
   int get timestamp => createdAt;
 
-  String get id => senderId;
-
   @override
   String toString() {
-    return 'ChatMessageModel{ createdAt: $createdAt}';
+    return 'ChatMessageModel{messageId: $messageId, createdAt: $createdAt}';
   }
 }
