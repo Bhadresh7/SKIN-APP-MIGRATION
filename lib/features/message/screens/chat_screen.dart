@@ -20,70 +20,132 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
-
-  final List<DocumentSnapshot> _chatDocs = [];
-  DocumentSnapshot? _lastDocument;
-  bool _isLoading = false;
-  bool _hasMore = true;
-  static const int _limit = 10;
+  final List<ChatMessageModel> _messages = [];
+  final List<DocumentSnapshot> _documents = []; // Track documents for pagination
+  bool _isLoadingMore = false;
+  bool _hasMoreMessages = true;
+  static const int _pageSize = 20;
+  StreamSubscription<List<ChatMessageModel>>? _messagesStream;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    _initializeStreamPagination();
+    _setupScrollListener();
+  }
 
+  void _initializeStreamPagination() {
+    // Start listening to real-time messages using provider
+    _startMessagesStream();
+    
+    // Load initial messages
+    _loadInitialMessages();
+  }
+
+  void _startMessagesStream() {
+    final chatProvider = context.read<ChatProvider>();
+    
+    _messagesStream = chatProvider.getMessagesStream(limit: _pageSize).listen(
+      (List<ChatMessageModel> messages) {
+        _handleStreamUpdate(messages);
+      },
+      onError: (error) {
+        debugPrint('❌ Stream error: $error');
+      },
+    );
+  }
+
+  void _handleStreamUpdate(List<ChatMessageModel> messages) {
+    if (!mounted) return;
+
+    setState(() {
+      _messages.clear();
+      _messages.addAll(messages);
+      
+      // Update pagination state based on message count
+      _hasMoreMessages = messages.length >= _pageSize;
+    });
+  }
+
+  Future<void> _loadInitialMessages() async {
+    if (!mounted) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      // Sync with provider's local messages first
+      final chatProvider = context.read<ChatProvider>();
+      await chatProvider.syncNewMessagesFromFirestore();
+
+      // Load initial batch using provider method with document tracking
+      final result = await chatProvider.getPaginatedMessagesWithDocs(limit: _pageSize);
+
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          _messages.addAll(result['messages'] as List<ChatMessageModel>);
+          _documents.clear();
+          _documents.addAll(result['documents'] as List<DocumentSnapshot>);
+          _hasMoreMessages = result['hasMore'] as bool;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading initial messages: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
+    }
+  }
+
+  void _setupScrollListener() {
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels <=
-              _scrollController.position.minScrollExtent + 50 &&
-          !_isLoading &&
-          _hasMore) {
-        _loadMessages();
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isLoadingMore &&
+          _hasMoreMessages) {
+        _loadMoreMessages();
       }
     });
   }
 
-  Future<void> _loadMessages() async {
-    if (_isLoading || !_hasMore) return;
+  Future<void> _loadMoreMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages || _documents.isEmpty) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isLoadingMore = true);
 
     try {
-      // First, try to sync with provider's local messages
       final chatProvider = context.read<ChatProvider>();
-      await chatProvider.syncNewMessagesFromFirestore();
+      
+      // Use the last document for pagination
+      final lastDocument = _documents.last;
+      
+      final result = await chatProvider.getPaginatedMessagesWithDocs(
+        startAfter: lastDocument,
+        limit: _pageSize,
+      );
 
-      Query query = FirebaseFirestore.instance
-          .collection('chats')
-          .orderBy('ts', descending: true)
-          .limit(_limit);
-
-      if (_lastDocument != null) {
-        query = query.startAfterDocument(_lastDocument!);
-      }
-
-      final querySnapshot = await query.get();
-
-      if (querySnapshot.docs.isNotEmpty) {
+      if (mounted && (result['messages'] as List<ChatMessageModel>).isNotEmpty) {
         setState(() {
-          _chatDocs.insertAll(0, querySnapshot.docs); // prepend messages
-          _lastDocument = querySnapshot.docs.last;
+          _messages.addAll(result['messages'] as List<ChatMessageModel>);
+          _documents.addAll(result['documents'] as List<DocumentSnapshot>);
+          _hasMoreMessages = result['hasMore'] as bool;
         });
-
-        if (querySnapshot.docs.length < _limit) {
-          _hasMore = false;
-        }
-      } else {
-        _hasMore = false;
+      } else if (mounted) {
+        setState(() => _hasMoreMessages = false);
       }
     } catch (e) {
-      debugPrint('❌ Error loading messages: $e');
+      debugPrint('❌ Error loading more messages: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
     }
   }
 
   @override
   void dispose() {
+    _messagesStream?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -107,7 +169,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Image.asset(AppAssets.logo),
                   ),
                   SizedBox(width: 0.02.sw),
-                  // Show loading indicator when provider is loading metadata
                   if (chatProvider.isLoadingMetadata)
                     const SizedBox(
                       width: 16,
@@ -126,9 +187,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -148,7 +207,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ],
                     ),
                   ),
-                Expanded(child: _buildMessagesList(chatProvider)),
+                Expanded(child: _buildMessagesList()),
                 MessageTextField(
                   messageController: chatProvider.messageController,
                 ),
@@ -160,102 +219,45 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessagesList(ChatProvider chatProvider) {
-    // Combine provider messages with paginated messages
-    final providerMessages = chatProvider.messages;
-    final hasProviderMessages = providerMessages.isNotEmpty;
-
-    if (_chatDocs.isEmpty && !hasProviderMessages) {
-      return const Center(child: Text('No messages yet.'));
-    }
-
-    return ListView(
-      controller: _scrollController,
-      reverse: false,
-
-      children: [
-        _buildMessageItem(context, 10, chatProvider, hasProviderMessages),
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('chats')
-              .orderBy('ts', descending: true)
-              .limit(10)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return CircularProgressIndicator();
-            var latestChats = snapshot.data!.docs;
-            List<ChatMessageModel> _chats = latestChats
-                .map(
-                  (e) => ChatMessageModel.fromJson(
-                    e.data() as Map<String, dynamic>,
-                  ),
-                )
-                .toList();
-            return Column(
-              children: _chats
-                  .map(
-                    (doc) => Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: ChatBubble(chatMessage: doc),
-                    ),
-                  )
-                  .toList(),
-            );
-          },
+  Widget _buildMessagesList() {
+    if (_messages.isEmpty && !_isLoadingMore) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No messages yet',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
         ),
-      ],
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      reverse: true, // Show newest messages at the bottom
+      itemCount: _messages.length + (_hasMoreMessages ? 1 : 0),
+      itemBuilder: (context, index) {
+        // Show loading indicator at the top when loading more
+        if (index == _messages.length) {
+          return _hasMoreMessages
+              ? const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : const SizedBox();
+        }
+
+        // Show message
+        final message = _messages[index];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+          child: ChatBubble(chatMessage: message),
+        );
+      },
     );
-  }
-  //
-  // int _calculateItemCount(bool hasProviderMessages) {
-  //   int count = _chatDocs.length + 1; // +1 for loading indicator
-  //
-  //   // Add provider messages that aren't already in _chatDocs
-  //   // This prevents duplication while showing local messages immediately
-  //   return count;
-  // }
-
-  Widget _buildMessageItem(
-    BuildContext context,
-    int index,
-    ChatProvider chatProvider,
-    bool hasProviderMessages,
-  ) {
-    // Show loading indicator at the top
-    if (index == 0) {
-      return _isLoading
-          ? const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : const SizedBox();
-    }
-
-    // Build message from Firestore docs
-    final docIndex = index - 1;
-    if (docIndex < _chatDocs.length) {
-      final messageData = _chatDocs[docIndex].data() as Map<String, dynamic>;
-      final metadata = MetaModel.fromJson(messageData['metadata']);
-      final senderId = messageData['id'];
-      final timestamp =
-          messageData['ts'] ?? DateTime.now().millisecondsSinceEpoch;
-
-      final chatMessage = ChatMessageModel(
-        metadata: metadata,
-        senderId: senderId,
-        createdAt: timestamp,
-        name:
-            context.readAuthProvider.user?.displayName ??
-            context.readAuthProvider.userData?.username ??
-            'Unknown',
-      );
-
-      return Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: ChatBubble(chatMessage: chatMessage),
-      );
-    }
-
-    return const SizedBox();
   }
 }

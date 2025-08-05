@@ -425,6 +425,123 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  // ==== STREAM PAGINATION SUPPORT ====
+
+  // Method to get real-time messages stream for pagination
+  Stream<List<ChatMessageModel>> getMessagesStream({int limit = 20}) {
+    return FirebaseFirestore.instance
+        .collection('chats')
+        .orderBy('ts', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((QuerySnapshot snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return _createMessageFromFirestoreData(data, doc.id);
+      }).where((message) => message != null).cast<ChatMessageModel>().toList();
+    });
+  }
+
+  // Method to get paginated messages with document tracking
+  Future<Map<String, dynamic>> getPaginatedMessagesWithDocs({
+    DocumentSnapshot? startAfter,
+    int limit = 20,
+  }) async {
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('chats')
+          .orderBy('ts', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final querySnapshot = await query.get();
+      
+      final messages = querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return _createMessageFromFirestoreData(data, doc.id);
+      }).where((message) => message != null).cast<ChatMessageModel>().toList();
+
+      return {
+        'messages': messages,
+        'documents': querySnapshot.docs,
+        'hasMore': querySnapshot.docs.length >= limit,
+      };
+    } catch (e) {
+      AppLoggerHelper.logError('Error getting paginated messages: $e');
+      return {
+        'messages': <ChatMessageModel>[],
+        'documents': <DocumentSnapshot>[],
+        'hasMore': false,
+      };
+    }
+  }
+
+  // Method to get paginated messages
+  Future<List<ChatMessageModel>> getPaginatedMessages({
+    DocumentSnapshot? startAfter,
+    int limit = 20,
+  }) async {
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('chats')
+          .orderBy('ts', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final querySnapshot = await query.get();
+      
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return _createMessageFromFirestoreData(data, doc.id);
+      }).where((message) => message != null).cast<ChatMessageModel>().toList();
+    } catch (e) {
+      AppLoggerHelper.logError('Error getting paginated messages: $e');
+      return [];
+    }
+  }
+
+  // Method to add message and sync with Firestore
+  Future<void> sendMessage(ChatMessageModel message) async {
+    try {
+      AppLoggerHelper.logInfo('Sending message: ${message.metadata?.text}');
+      
+      // Add to local storage first
+      await addMessage(message);
+      
+      // Add to Firestore
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .add(message.toJson());
+      
+      AppLoggerHelper.logInfo('Message sent successfully');
+    } catch (e) {
+      AppLoggerHelper.logError('Error sending message: $e');
+    }
+  }
+
+  // Method to get document by message data
+  Future<DocumentSnapshot?> getDocumentByMessage(ChatMessageModel message) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('ts', isEqualTo: message.createdAt)
+          .where('id', isEqualTo: message.senderId)
+          .limit(1)
+          .get();
+      
+      return querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first : null;
+    } catch (e) {
+      AppLoggerHelper.logError('Error getting document by message: $e');
+      return null;
+    }
+  }
+
   @override
   void dispose() {
     AppLoggerHelper.logInfo('Disposing ChatProvider...');
