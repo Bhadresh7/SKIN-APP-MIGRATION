@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/provider/image_picker_provider.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
@@ -23,6 +24,7 @@ class ImageSetupScreen extends StatefulWidget {
 
 class _ImageSetupScreenState extends State<ImageSetupScreen> {
   bool isLoading = false;
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<MyAuthProvider>(context, listen: false);
@@ -40,6 +42,16 @@ class _ImageSetupScreenState extends State<ImageSetupScreen> {
                   alignment: Alignment.topRight,
                   child: TextButton(
                     onPressed: () async {
+                      context.readAuthProvider.userData =
+                          UsersModel.fromFirestore(
+                            (await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(context.readAuthProvider.user!.uid)
+                                        .get())
+                                    .data()
+                                as Map<String, dynamic>,
+                          );
+
                       AppRouter.replace(context, ChatScreen());
                     },
                     child: Text(
@@ -93,7 +105,9 @@ class _ImageSetupScreenState extends State<ImageSetupScreen> {
 
                         String userId = authProvider.user!.uid;
                         String? imageUrl = await imagePickerProvider
-                            .uploadImageToFirebase(userId,context);
+                            .uploadImageToFirebase(userId, context);
+
+                        print(imageUrl);
 
                         if (imageUrl == null) {
                           ToastHelper.showErrorToast(
@@ -101,8 +115,7 @@ class _ImageSetupScreenState extends State<ImageSetupScreen> {
                             message: "Image url not created",
                           );
                           return;
-                        }else{
-
+                        } else {
                           AppRouter.replace(context, ChatScreen());
                         }
                       },

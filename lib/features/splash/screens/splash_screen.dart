@@ -20,17 +20,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Future.delayed(Duration(seconds: 1), () async {
       Provider.of<MyAuthProvider>(context, listen: false).initialize(context);
-      // final chatProvider = context.read<ChatProvider>();
-      //
-      // // // Wait for DB to finish initializing
-      // // await LocalDBService().init();
-      //
-      // // Now it's safe to call DB-related methods
-      // chatProvider.initializeSharingIntent(context);
-      // chatProvider.initIntentHandling();
-      // await chatProvider.loadMessages(); // await is optional here unless needed
-      // chatProvider.startFirestoreListener();
-      // await chatProvider.syncNewMessagesFromFirestore(); // optional await
     });
   }
 

@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -31,6 +30,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController mobileNumberController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
   final ValueNotifier<bool> isUpdateEnabled = ValueNotifier(false);
+  bool isLoading = true;
 
   late ImagePickerProvider imagePickerProvider;
   String? _userId;
@@ -41,12 +41,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     imagePickerProvider = context.read<ImagePickerProvider>();
 
     _userId = context.readAuthProvider.userData?.uid;
-    _loadUserData();
 
-    usernameController.addListener(_checkForChanges);
-    mobileNumberController.addListener(_checkForChanges);
-    dateController.addListener(_checkForChanges);
-    imagePickerProvider.addListener(_checkForChanges);
+    _loadUserData();
   }
 
   Future<void> _loadUserData() async {
@@ -58,11 +54,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         .doc(userId)
         .get();
     final data = doc.data();
+
     if (data != null) {
       usernameController.text = data['username'] ?? '';
       mobileNumberController.text = data['mobileNumber'] ?? '';
       dateController.text = data['dob'] ?? '';
+
+      print(context.readAuthProvider.userData!.dob);
+      print(data['dob']);
+      print(dateController.text.length);
+
+      setState(() {
+        isLoading = false;
+      });
     }
+    usernameController.addListener(_checkForChanges);
+    mobileNumberController.addListener(_checkForChanges);
+    dateController.addListener(_checkForChanges);
+    imagePickerProvider.addListener(_checkForChanges);
   }
 
   void _checkForChanges() {
@@ -75,6 +84,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             (currentUser?.mobileNumber ?? "") ||
         dateController.text.trim() != (currentUser?.dob ?? "") ||
         selectedImage != null;
+    print(isChanged);
+
+    print(dateController.text);
+    print(dateController.text.trim() != (currentUser?.dob ?? ""));
 
     isUpdateEnabled.value = isChanged;
   }
@@ -129,62 +142,69 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    MyAuthProvider authProvider =Provider.of<MyAuthProvider>(context);
+    MyAuthProvider authProvider = Provider.of<MyAuthProvider>(context);
     return KBackgroundScaffold(
       appBar: AppBar(title: Text('Edit Profile')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            GestureDetector(
-              onTap: () async {
-                await imagePickerProvider.pickImage();
-              },
-              child: CircleAvatar(
-                radius: 0.3.sw,
-                backgroundImage:
-                 imagePickerProvider.selectedImage != null? FileImage(imagePickerProvider.selectedImage!):
-                authProvider.userData!.isGoogle!?NetworkImage(context.readAuthProvider.user!.photoURL!):authProvider.userData!.imageUrl!=null?
-                NetworkImage(context.readAuthProvider.userData!.imageUrl!):
-                     AssetImage(AppAssets.profileImage),
+      body: isLoading
+          ? CircularProgressIndicator()
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      await imagePickerProvider.pickImage();
+                    },
+                    child: CircleAvatar(
+                      radius: 0.3.sw,
+                      backgroundImage: imagePickerProvider.selectedImage != null
+                          ? FileImage(imagePickerProvider.selectedImage!)
+                          : authProvider.userData!.isGoogle!
+                          ? NetworkImage(
+                              context.readAuthProvider.user!.photoURL!,
+                            )
+                          : authProvider.userData!.imageUrl != null
+                          ? NetworkImage(
+                              context.readAuthProvider.userData!.imageUrl!,
+                            )
+                          : AssetImage(AppAssets.profileImage),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  KCustomInputField(
+                    controller: usernameController,
+                    name: 'name',
+                    hintText: 'username',
+                    validators: [FormBuilderValidators.required()],
+                  ),
+                  const SizedBox(height: 20),
+                  KCustomInputField(
+                    controller: mobileNumberController,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 10,
+                    name: '',
+                    hintText: '',
+                    validators: [],
+                  ),
+                  const SizedBox(height: 20),
 
+                  DateInputField(controller: dateController),
+                  const SizedBox(height: 30),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isUpdateEnabled,
+                    builder: (context, enabled, _) {
+                      return KCustomButton(
+                        text: "Update",
+                        onPressed: () {
+                          _handleUpdate();
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            KCustomInputField(
-              controller: usernameController,
-              name: 'name',
-              hintText: 'username',
-              validators: [FormBuilderValidators.required()],
-            ),
-            const SizedBox(height: 20),
-            KCustomInputField(
-              controller: mobileNumberController,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
-              name: '',
-              hintText: '',
-              validators: [],
-            ),
-            const SizedBox(height: 20),
-
-            DateInputField(controller: dateController),
-            const SizedBox(height: 30),
-            ValueListenableBuilder<bool>(
-              valueListenable: isUpdateEnabled,
-              builder: (context, enabled, _) {
-                return KCustomButton(
-                  text: "Update",
-                  onPressed: () {
-                    _handleUpdate();
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

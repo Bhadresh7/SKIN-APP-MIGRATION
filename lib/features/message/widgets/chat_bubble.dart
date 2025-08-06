@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -131,19 +132,9 @@ class _ChatBubbleState extends State<ChatBubble> {
     if (isImage) {
       content = ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          widget.chatMessage.metadata!.img!,
+        child: CachedNetworkImage(
+          imageUrl: widget.chatMessage.metadata!.img!,
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const SizedBox(
-              height: 100,
-              width: 100,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.broken_image),
         ),
       );
     } else if (isUrl && metadata != null) {

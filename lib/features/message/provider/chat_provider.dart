@@ -34,6 +34,7 @@ class ChatProvider extends ChangeNotifier {
   List<ChatMessageModel> get messages => _messages;
   bool get isLoadingMetadata => _isLoadingMetadata;
   String? get imageMetadata => _imageMetadata;
+  String? get receivedText => _receivedText;
 
   // ==== SHARING INTENT HANDLING ====
 
@@ -41,6 +42,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       AppLoggerHelper.logInfo('Initializing sharing intent...');
 
+      // Listen to sharing stream
       _sharingIntentSubscription = FlutterSharingIntent.instance
           .getMediaStream()
           .listen(
@@ -48,20 +50,25 @@ class ChatProvider extends ChangeNotifier {
               AppLoggerHelper.logInfo(
                 'Received ${files.length} shared files from media stream',
               );
-              _updateSharedFiles(files, context);
+              if (context.mounted) {
+                _updateSharedFiles(files, context);
+              }
             },
             onError: (err) {
               AppLoggerHelper.logError("Error in getMediaStream: $err");
             },
           );
 
+      // Get initial sharing when app is opened via share
       FlutterSharingIntent.instance
           .getInitialSharing()
           .then((files) {
             AppLoggerHelper.logInfo(
               'Received ${files.length} files from initial sharing',
             );
-            _updateSharedFiles(files, context);
+            if (files.isNotEmpty) {
+              _updateSharedFiles(files, context);
+            }
           })
           .catchError((err) {
             AppLoggerHelper.logError("Error in getInitialSharing: $err");
@@ -86,28 +93,54 @@ class ChatProvider extends ChangeNotifier {
         sharedValues = newSharedValues;
         notifyListeners();
 
-        // Check if files list is not empty before accessing
+        // Process shared files
         if (files.isNotEmpty) {
-          final firstFile = files[0];
-          AppLoggerHelper.logInfo(
-            'Processing first shared file: ${firstFile.type}',
-          );
+          for (final file in files) {
+            AppLoggerHelper.logInfo(
+              'Processing shared file: ${file.type} - ${file.value}',
+            );
 
-          if (firstFile.type == SharedMediaType.TEXT) {
-            messageController.text = firstFile.value ?? "";
-            AppLoggerHelper.logInfo('Set text content to message controller');
-          } else if (firstFile.type == SharedMediaType.IMAGE) {
-            final imagePath = firstFile.value;
-            if (imagePath != null && imagePath.isNotEmpty) {
-              AppLoggerHelper.logInfo(
-                'Navigating to image preview for: $imagePath',
-              );
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ImagePreviewScreen(image: File(imagePath)),
-                ),
-              );
+            if (file.type == SharedMediaType.TEXT) {
+              final textValue = file.value ?? "";
+              if (textValue.isNotEmpty) {
+                // Set the text to the message controller
+                messageController.text = textValue;
+                _receivedText = textValue;
+
+                AppLoggerHelper.logInfo(
+                  'Set shared text to message controller: $textValue',
+                );
+
+                // Check if it's a URL and fetch metadata
+                if (_isValidUrl(textValue)) {
+                  AppLoggerHelper.logInfo('Detected URL, fetching metadata...');
+                  fetchLinkMetadata(textValue);
+                }
+
+                notifyListeners();
+              }
+            } else if (file.type == SharedMediaType.IMAGE) {
+              final imagePath = file.value;
+              if (imagePath != null && imagePath.isNotEmpty) {
+                AppLoggerHelper.logInfo(
+                  'Navigating to image preview for: $imagePath',
+                );
+
+                // Check if context is still mounted before navigation
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ImagePreviewScreen(image: File(imagePath)),
+                    ),
+                  );
+                } else {
+                  AppLoggerHelper.logError(
+                    'Context not mounted, cannot navigate',
+                  );
+                }
+              }
             }
           }
         } else {
@@ -118,6 +151,8 @@ class ChatProvider extends ChangeNotifier {
       }
     } catch (e) {
       AppLoggerHelper.logError('Error updating shared files: $e');
+      // Add more specific error details
+      AppLoggerHelper.logError('Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -143,16 +178,30 @@ class ChatProvider extends ChangeNotifier {
 
       AppLoggerHelper.logInfo('Handling intent: ${intent.action}');
 
-      _receivedText = intent.extra?['android.intent.extra.TEXT']?.toString();
-      _imageMetadata = _receivedText;
+      // Handle different types of intents
+      String? intentText;
 
-      AppLoggerHelper.logInfo('Received text from intent: $_receivedText');
+      // Try to get text from different possible keys
+      intentText =
+          intent.extra?['android.intent.extra.TEXT']?.toString() ??
+          intent.extra?['android.intent.extra.SUBJECT']?.toString() ??
+          intent.data?.toString();
 
-      notifyListeners();
+      if (intentText != null && intentText.isNotEmpty) {
+        _receivedText = intentText;
+        _imageMetadata = intentText;
 
-      if (_receivedText != null && _isValidUrl(_receivedText!)) {
-        AppLoggerHelper.logInfo('Valid URL detected, fetching metadata...');
-        fetchLinkMetadata(_receivedText!);
+        // Set the text to the message controller
+        messageController.text = intentText;
+
+        AppLoggerHelper.logInfo('Received text from intent: $intentText');
+
+        notifyListeners();
+
+        if (_isValidUrl(intentText)) {
+          AppLoggerHelper.logInfo('Valid URL detected, fetching metadata...');
+          fetchLinkMetadata(intentText);
+        }
       }
     } catch (e) {
       AppLoggerHelper.logError('Error handling intent: $e');
@@ -193,6 +242,7 @@ class ChatProvider extends ChangeNotifier {
   void clearMetadata() {
     AppLoggerHelper.logInfo('Clearing metadata');
     _imageMetadata = null;
+    _receivedText = null;
     notifyListeners();
   }
 
@@ -200,6 +250,15 @@ class ChatProvider extends ChangeNotifier {
     AppLoggerHelper.logInfo('Clearing shared files and values');
     sharedFiles = null;
     sharedValues = [];
+    _receivedText = null;
+    messageController.clear();
+    notifyListeners();
+  }
+
+  // Method to manually set text in message controller
+  void setMessageText(String text) {
+    messageController.text = text;
+    _receivedText = text;
     notifyListeners();
   }
 
@@ -525,6 +584,8 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(ChatMessageModel message) async {
     try {
       AppLoggerHelper.logInfo('Sending message: ${message.metadata?.text}');
+
+      if (message.metadata == null) return;
 
       // 1. Add to Firestore and get the doc reference
       final docRef = await FirebaseFirestore.instance

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
@@ -170,35 +171,35 @@ class _ViewAllUsersScreenState extends State<ViewAllUsersScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // StreamBuilder<Map<String, dynamic>>(
-          //   stream: FirebaseFirestore.instance.collection('users').snapshots(),
-          //   builder: (_, snapshot) {
-          //     final data = snapshot.data ?? {};
-          //     final employeeCount = data["admin"] ?? 0;
-          //     final candidateCount = data["user"] ?? 0;
-          //     final blockedUserCount = data["blocked"] ?? 0;
-          //
-          //     return Padding(
-          //       padding: const EdgeInsets.all(8.0),
-          //       child: Row(
-          //         children: [
-          //           Text(
-          //             "Employer: $employeeCount  ",
-          //             style: TextStyle(fontSize: AppStyles.bodyText),
-          //           ),
-          //           Text(
-          //             "Candidate: $candidateCount  ",
-          //             style: TextStyle(fontSize: AppStyles.bodyText),
-          //           ),
-          //           Text(
-          //             "Blocked: $blockedUserCount",
-          //             style: TextStyle(fontSize: AppStyles.bodyText),
-          //           ),
-          //         ],
-          //       ),
-          //     );
-          //   },
-          // ),
+          StreamBuilder<Map<String, dynamic>>(
+            stream: context.readSuperAdminProvider.userAndAdminCountStream,
+            builder: (_, snapshot) {
+              final data = snapshot.data ?? {};
+              final employeeCount = data["admin"] ?? 0;
+              final candidateCount = data["user"] ?? 0;
+              final blockedUserCount = data["blocked"] ?? 0;
+
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Text(
+                      "Employer: $employeeCount  ",
+                      style: TextStyle(fontSize: AppStyles.bodyText),
+                    ),
+                    Text(
+                      "Candidate: $candidateCount  ",
+                      style: TextStyle(fontSize: AppStyles.bodyText),
+                    ),
+                    Text(
+                      "Blocked: $blockedUserCount",
+                      style: TextStyle(fontSize: AppStyles.bodyText),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           Padding(
             padding: EdgeInsets.symmetric(vertical: 10.h),
             child: SingleChildScrollView(

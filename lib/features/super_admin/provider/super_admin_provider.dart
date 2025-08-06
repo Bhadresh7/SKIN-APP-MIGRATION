@@ -264,4 +264,36 @@ class SuperAdminProvider with ChangeNotifier {
       return null;
     }
   }
+
+  Stream<Map<String, int>> get userAndAdminCountStream {
+    return FirebaseFirestore.instance.collection('users').snapshots().map((
+      snapshot,
+    ) {
+      int adminCount = 0;
+      int userCount = 0;
+      int blockedUserCount = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+
+        if (data.containsKey('isBlocked') && data['isBlocked'] == true) {
+          blockedUserCount++;
+        }
+
+        if (data.containsKey('role')) {
+          if (data['role'] == 'admin') {
+            adminCount++;
+          } else if (data['role'] == 'user') {
+            userCount++;
+          }
+        }
+      }
+
+      return {
+        'admin': adminCount,
+        'user': userCount,
+        'blocked': blockedUserCount,
+      };
+    });
+  }
 }

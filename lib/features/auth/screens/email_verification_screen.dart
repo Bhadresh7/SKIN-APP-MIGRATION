@@ -12,6 +12,7 @@ import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_registeration_screen.dart';
 import 'package:skin_app_migration/features/profile/screens/basic_user_details_form_screen.dart';
 
+import '../../../core/helpers/app_logger.dart';
 import '../providers/my_auth_provider.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -23,13 +24,18 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+  late Timer _timer;
+
   @override
   void initState() {
     super.initState();
     // Listen for changes in email verification status
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Timer.periodic(Duration(seconds: 2), (timer) async {
+      _timer = Timer.periodic(Duration(seconds: 2), (timer) async {
         await FirebaseAuth.instance.currentUser?.reload();
+        AppLoggerHelper.logInfo(
+          "${FirebaseAuth.instance.currentUser!.emailVerified}",
+        );
         _checkAndNavigate();
       });
     });
@@ -37,10 +43,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   void _checkAndNavigate() {
     final authProvider = Provider.of<MyAuthProvider>(context, listen: false);
-
-    if (authProvider.user!.emailVerified) {
+    authProvider.user = FirebaseAuth.instance.currentUser;
+    if (FirebaseAuth.instance.currentUser!.emailVerified) {
       AppRouter.replace(context, BasicUserDetailsFormScreen());
     }
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
   }
 
   @override

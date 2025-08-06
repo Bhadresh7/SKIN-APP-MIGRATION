@@ -11,6 +11,7 @@ import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_input_field.dart';
+import 'package:skin_app_migration/features/auth/screens/auth_forget_password_screen.dart';
 import 'package:skin_app_migration/features/auth/screens/auth_registeration_screen.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_google_auth_button.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_or_bar.dart';
@@ -137,7 +138,7 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return KBackgroundScaffold(
-      loading: context.readAuthProvider.isLoading,
+      loading: context.watchAuthProvider.isLoading,
       body: SingleChildScrollView(
         child: Form(
           key: formKey,
@@ -177,7 +178,8 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     InkWell(
-                      // onTap: () => AppRouter.to(context, ForgetPassword()),
+                      onTap: () =>
+                          AppRouter.to(context, AuthForgetPasswordScreen()),
                       child: Text("Forget password ?"),
                     ),
                   ],
@@ -196,7 +198,6 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
                           AppStatus.kDisconnected) {
                         print("Please connect to internet");
                       }
-
                       final result = await context.readAuthProvider
                           .signInWithEmailAndPassword(
                             email: emailController.text.trim(),
@@ -212,62 +213,7 @@ class _AuthLoginScreenState extends State<AuthLoginScreen> {
               KOrBar(),
               KGoogleAuthButton(
                 onPressed: () async {
-                  final result = await context.readAuthProvider
-                      .signInWithGoogle();
-                  if (!context.mounted) return;
-
-                  // switch (result) {
-                  //   case AppStatus.kBlocked:
-                  //     showDialog(
-                  //       context: context,
-                  //       builder: (BuildContext context) {
-                  //         return AlertDialog(
-                  //           title: Text("Blocked"),
-                  //           content: Text(
-                  //             "Please contact the Admin for more information",
-                  //           ),
-                  //           actions: [
-                  //             TextButton(
-                  //               onPressed: () async {
-                  //                 MyNavigation.back(context);
-                  //                 await authProvider.signOut();
-                  //               },
-                  //               child: Text("ok"),
-                  //             ),
-                  //           ],
-                  //         );
-                  //       },
-                  //     );
-                  //
-                  //   case AppStatus.kEmailAlreadyExists:
-                  //     MyNavigation.replace(context, HomeScreenVarient2());
-                  //     ToastHelper.showSuccessToast(
-                  //       context: context,
-                  //       message: "Login Successful",
-                  //     );
-                  //
-                  //     break;
-                  //
-                  //   case AppStatus.kSuccess:
-                  //     MyNavigation.replace(context, BasicDetailsScreen());
-                  //     break;
-                  //
-                  //   case AppStatus.kFailed:
-                  //     ToastHelper.showErrorToast(
-                  //       context: context,
-                  //       message: "Login Failed",
-                  //     );
-                  //     await authProvider.signOut();
-                  //     break;
-                  //
-                  //   default:
-                  //     print("Google Auth Result: $result");
-                  //     ToastHelper.showErrorToast(
-                  //       context: context,
-                  //       message: result,
-                  //     );
-                  //     break;
-                  // }
+                  await context.readAuthProvider.signInWithGoogle(context);
                 },
                 text: 'continue with google',
               ),

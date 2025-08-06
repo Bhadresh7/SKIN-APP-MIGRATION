@@ -2,11 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/features/about/terms_and_conditions.dart';
+import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
 import 'package:skin_app_migration/features/profile/screens/edit_profile_screen.dart';
 import 'package:skin_app_migration/features/super_admin/screens/view_all_users_screen.dart';
 
@@ -34,13 +36,14 @@ class KBackgroundScaffold extends StatefulWidget {
 }
 
 class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   Future.microtask(() {
-  //     Provider.of<AppVersionProvider>(context, listen: false).fetchAppVersion();
-  //   });
-  // }
+  @override
+  void initState() {
+    super.initState();
+
+    // Future.microtask(() {
+    //   Provider.of<AppVersionProvider>(context, listen: false).fetchAppVersion();
+    // });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -218,22 +221,32 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                                         fontSize: AppStyles.bodyText,
                                       ),
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          AppRouter.back(context);
-                                        },
-                                        child: Text("No"),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          context.readAuthProvider.signOut(
-                                            context,
-                                          );
-                                        },
-                                        child: Text("Yes"),
-                                      ),
-                                    ],
+
+                                    actions: context.watchAuthProvider.isLoading
+                                        ? [
+                                            Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                          ]
+                                        : [
+                                            TextButton(
+                                              onPressed: () {
+                                                AppRouter.back(context);
+                                              },
+                                              child: Text("No"),
+                                            ),
+
+                                            TextButton(
+                                              onPressed: () {
+                                                Provider.of<MyAuthProvider>(
+                                                  context,
+                                                  listen: false,
+                                                ).signOut(context);
+                                              },
+                                              child: Text("Yes"),
+                                            ),
+                                          ],
                                   );
                                 },
                               );

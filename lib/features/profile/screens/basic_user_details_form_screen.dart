@@ -6,6 +6,8 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/helpers/app_logger.dart';
 import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
@@ -44,7 +46,6 @@ class _BasicUserDetailsFormScreenState
     userNameController = TextEditingController();
     mobileNumberController = TextEditingController();
     dateController = TextEditingController();
-    // userNameController.text = HiveService.formUserName ?? "User";
     super.initState();
     print("BASIC USER DETAILS ${userNameController.text}");
   }
@@ -60,8 +61,6 @@ class _BasicUserDetailsFormScreenState
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<MyAuthProvider>(context);
-    // final basicDetailsProvider = Provider.of<BasicUserDetailsProvider>(context);
-    // print("GOOGLE STATUS=====>>>>${context.read<MyAuthProvider>().isGoogle}");
 
     return PopScope(
       canPop: false,
@@ -193,7 +192,16 @@ class _BasicUserDetailsFormScreenState
 
                         if (authProvider.user!.providerData.first.providerId ==
                             "google.com") {
-                          AppRouter.replace(context, ChatScreen());
+                          final userData = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(context.readAuthProvider.user!.uid)
+                              .get();
+                          if (userData.exists) {
+                            AppLoggerHelper.logInfo(
+                              "Before navigating to the chat screen",
+                            );
+                            AppRouter.replace(context, ChatScreen());
+                          }
                         } else {
                           AppRouter.replace(context, ImageSetupScreen());
                         }

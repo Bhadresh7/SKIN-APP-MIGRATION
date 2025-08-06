@@ -28,15 +28,16 @@ exports.notifications = onDocumentCreated(
       usersSnapshot.forEach((doc) => {
         const userData = doc.data();
         const email = userData.email;
+          console.log(email);
 
         if (email) {
           const message = {
             data: {
-              chatId,
-              username,
-              text,
-              img,
-              url,
+              "chatId":chatId,
+              "username":username,
+              "text":text,
+              "img":img,
+              "url":url,
             },
             topic: email,
           };

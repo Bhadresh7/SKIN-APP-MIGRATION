@@ -5,11 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
+import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
 import 'package:skin_app_migration/features/message/provider/chat_provider.dart';
 import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
-import 'package:skin_app_migration/features/message/widgets/message_text_field.dart';
+
+import '../../auth/providers/my_auth_provider.dart';
+import '../widgets/message_text_field.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -25,7 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
       []; // Track documents for pagination
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
-  static const int _pageSize = 5;
+  static const int _pageSize = 20;
   StreamSubscription<List<ChatMessageModel>>? _messagesStream;
 
   @override
@@ -163,9 +167,12 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Consumer<ChatProvider>(
         builder: (context, chatProvider, child) {
           return KBackgroundScaffold(
+            loading: context.readAuthProvider.isLoading,
             margin: const EdgeInsets.all(0),
             showDrawer: true,
             appBar: AppBar(
+              backgroundColor: AppStyles.primary,
+              iconTheme: IconThemeData(color: AppStyles.smoke, size: 32),
               toolbarHeight: 0.09.sh,
               title: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -175,12 +182,42 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Image.asset(AppAssets.logo),
                   ),
                   SizedBox(width: 0.02.sw),
-                  if (chatProvider.isLoadingMetadata)
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                  StreamBuilder<Map<String, dynamic>>(
+                    stream:
+                        context.readSuperAdminProvider.userAndAdminCountStream,
+                    builder: (context, snapshot) {
+                      final employeeCount = snapshot.data?["admin"] ?? 0;
+                      final candidateCount = snapshot.data?["user"] ?? 0;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "S.K.I.N. App",
+                            style: TextStyle(color: AppStyles.smoke),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                "Employer: ${employeeCount.toString()}",
+                                style: TextStyle(
+                                  fontSize: AppStyles.bodyText,
+                                  color: AppStyles.smoke,
+                                ),
+                              ),
+                              SizedBox(width: 0.02.sw),
+                              Text(
+                                "Candidate: ${candidateCount.toString()}",
+                                style: TextStyle(
+                                  fontSize: AppStyles.bodyText,
+                                  color: AppStyles.smoke,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -215,8 +252,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 Expanded(child: _buildMessagesList()),
-                MessageTextField(
-                  messageController: chatProvider.messageController,
+                Consumer<MyAuthProvider>(
+                  builder: (context, authProvider, child) {
+                    return !(authProvider.userData?.canPost ?? false)
+                        ? SizedBox(height: 0.050.sh)
+                        : MessageTextField(
+                            messageController: chatProvider.messageController,
+                          );
+                  },
                 ),
               ],
             ),

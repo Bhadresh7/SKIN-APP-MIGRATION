@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lottie/lottie.dart';
-import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/helpers/toast_helper.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart'
@@ -17,8 +17,8 @@ import 'package:skin_app_migration/features/auth/screens/auth_login_screen.dart'
 import 'package:skin_app_migration/features/auth/screens/email_verification_screen.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_google_auth_button.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_or_bar.dart';
-
-import '../../../core/helpers/toast_helper.dart';
+import 'package:skin_app_migration/features/message/screens/chat_screen.dart';
+import 'package:skin_app_migration/features/profile/screens/basic_user_details_form_screen.dart';
 
 class AuthRegisterationScreen extends StatefulWidget {
   const AuthRegisterationScreen({super.key});
@@ -34,11 +34,8 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
     /// formKey
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    /// providers
-    final authProvider = Provider.of<MyAuthProvider>(context);
-
     return KBackgroundScaffold(
-      loading: authProvider.isLoading,
+      loading: context.watchAuthProvider.isLoading,
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Form(
@@ -51,7 +48,7 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
               KCustomInputField(
                 name: "email",
                 hintText: "Email",
-                controller: authProvider.emailController,
+                controller: context.readAuthProvider.emailController,
                 validators: [
                   FormBuilderValidators.email(),
                   FormBuilderValidators.required(
@@ -63,7 +60,7 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
                 isPassword: true,
                 name: "password",
                 hintText: "Password",
-                controller: authProvider.passwordController,
+                controller: context.readAuthProvider.passwordController,
                 validators: [
                   FormBuilderValidators.required(
                     errorText: "password is required",
@@ -78,7 +75,7 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
                 isPassword: true,
                 name: "confirm password",
                 hintText: "Confirm Password",
-                controller: authProvider.confirmPasswordController,
+                controller: context.readAuthProvider.confirmPasswordController,
                 validators: [
                   FormBuilderValidators.required(
                     errorText: "password is required",
@@ -152,56 +149,55 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
 
               ///OAuthButton
               KGoogleAuthButton(
-                // onPressed: () async {
-                //   final result = await authProvider.signInWithGoogle();
-                //   print("0000000000000000$result");
-                //   if (!context.mounted) return;
-                //   switch (result) {
-                //     case AppStatus.kBlocked:
-                //       showDialog(
-                //         context: context,
-                //         builder: (BuildContext context) {
-                //           return AlertDialog(
-                //             title: Text("User Blocked"),
-                //             content: Text(
-                //               "Please contact the Admin for more information",
-                //             ),
-                //             actions: [
-                //               TextButton(
-                //                 onPressed: () => MyNavigation.back(context),
-                //                 child: Text("ok"),
-                //               ),
-                //             ],
-                //           );
-                //         },
-                //       );
-                //     case AppStatus.kEmailAlreadyExists:
-                //       MyNavigation.replace(context, HomeScreenVarient2());
-                //       ToastHelper.showSuccessToast(
-                //         context: context,
-                //         message: "Login Successful",
-                //       );
-                //
-                //       break;
-                //
-                //     case AppStatus.kSuccess:
-                //       MyNavigation.replace(context, BasicDetailsScreen());
-                //       break;
-                //
-                //     case AppStatus.kFailed:
-                //       ToastHelper.showErrorToast(
-                //         context: context,
-                //         message: "Login Failed",
-                //       );
-                //       break;
-                //
-                //     default:
-                //       print("Google Auth Result: $result");
-                //
-                //       break;
-                //   }
-                // },
-                onPressed: () {},
+                onPressed: () async {
+                  final result = await context.readAuthProvider
+                      .signInWithGoogle(context);
+                  if (!context.mounted) return;
+                  switch (result) {
+                    case AppStatus.kBlocked:
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text("User Blocked"),
+                            content: Text(
+                              "Please contact the Admin for more information",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => AppRouter.back(context),
+                                child: Text("ok"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    case AppStatus.kEmailAlreadyExists:
+                      AppRouter.replace(context, ChatScreen());
+                      ToastHelper.showSuccessToast(
+                        context: context,
+                        message: "Login Successful",
+                      );
+
+                      break;
+
+                    case AppStatus.kSuccess:
+                      AppRouter.replace(context, BasicUserDetailsFormScreen());
+                      break;
+
+                    case AppStatus.kFailed:
+                      ToastHelper.showErrorToast(
+                        context: context,
+                        message: "Login Failed",
+                      );
+                      break;
+
+                    default:
+                      print("Google Auth Result: $result");
+
+                      break;
+                  }
+                },
                 text: 'continue with google',
               ),
 

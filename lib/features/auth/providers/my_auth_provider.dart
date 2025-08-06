@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_status.dart';
+import 'package:skin_app_migration/core/helpers/app_logger.dart';
 import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/service/local_db_service.dart';
 import 'package:skin_app_migration/core/service/push_notification_service.dart';
@@ -29,9 +32,66 @@ class MyAuthProvider extends ChangeNotifier {
   User? user;
   UsersModel? userData;
 
+  // Add stream subscription for real-time updates
+  StreamSubscription<DocumentSnapshot>? _userDataSubscription;
+
   void _setLoadingState(bool value) {
+    AppLoggerHelper.logInfo(value.toString());
     isLoading = value;
     notifyListeners();
+  }
+
+  // Method to start listening to user data changes
+  void _startUserDataListener() {
+    if (user == null) return;
+
+    // Cancel existing subscription if any
+    _userDataSubscription?.cancel();
+
+    // Start listening to user document changes
+    _userDataSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .snapshots()
+        .listen(
+          (DocumentSnapshot snapshot) {
+            if (snapshot.exists) {
+              try {
+                final newUserData = UsersModel.fromFirestore(
+                  snapshot.data()! as Map<String, dynamic>,
+                );
+
+                // Only update and notify if data actually changed
+                if (_hasUserDataChanged(newUserData)) {
+                  userData = newUserData;
+                  AppLoggerHelper.logInfo(
+                    'User data updated: canPost = ${userData!.canPost}',
+                  );
+                  notifyListeners();
+                }
+              } catch (e) {
+                AppLoggerHelper.logError('Error parsing user data: $e');
+              }
+            }
+          },
+          onError: (error) {
+            AppLoggerHelper.logError('Error listening to user data: $error');
+          },
+        );
+  }
+
+  // Helper method to check if user data has changed
+  bool _hasUserDataChanged(UsersModel newUserData) {
+    if (userData == null) return true;
+
+    return userData!.canPost != newUserData.canPost ||
+        userData!.isBlocked != newUserData.isBlocked;
+  }
+
+  // Method to stop listening to user data changes
+  void _stopUserDataListener() {
+    _userDataSubscription?.cancel();
+    _userDataSubscription = null;
   }
 
   void initialize(context) async {
@@ -106,7 +166,10 @@ class MyAuthProvider extends ChangeNotifier {
           tempData.data()! as Map<String, dynamic>,
         );
 
-        if (!userData!.isGoogle! && userData!.imageUrl == null) {
+        // Start listening to real-time updates
+        _startUserDataListener();
+
+        if (!(userData!.isGoogle)! && (userData!.imageUrl) == null) {
           AppRouter.replace(context, ImageSetupScreen());
         } else {
           // Initialize chat provider only after successful auth
@@ -172,6 +235,9 @@ class MyAuthProvider extends ChangeNotifier {
             userData = UsersModel.fromFirestore(
               userDoc.data()! as Map<String, dynamic>,
             );
+
+            // Start listening to real-time updates after successful login
+            _startUserDataListener();
           }
           if (userData!.isBlocked) {
             return AppStatus.kBlocked;
@@ -202,50 +268,122 @@ class MyAuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String> signInWithGoogle() async {
+  Future<String> signInWithGoogle(BuildContext context) async {
     try {
       _setLoadingState(true);
       notifyListeners();
 
-      // Trigger the authentication flow
+      AppLoggerHelper.logInfo('Google sign-in started.');
+
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
         _setLoadingState(false);
-        print("Google sign-in cancelled by user");
+        AppLoggerHelper.logInfo('Google sign-in cancelled by user.');
         notifyListeners();
         return AppStatus.kFailed;
       }
 
-      // Obtain the auth details from the request
+      AppLoggerHelper.logInfo(
+        'Google sign-in account selected: ${googleUser.email}',
+      );
+
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Create a new credential
+      AppLoggerHelper.logInfo('Google auth token received.');
+
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google credential
+      AppLoggerHelper.logInfo('Firebase credential created.');
+
       var userCredential = await _auth.signInWithCredential(credential);
+
       if (userCredential.user != null) {
         user = userCredential.user;
-        _setLoadingState(false);
-        notifyListeners();
-        return AppStatus.kSuccess;
+        final uid = user!.uid;
+
+        AppLoggerHelper.logInfo('Google sign-in successful. UID: $uid');
+
+        // Subscribe to push notifications
+        await _notificationService.subscribeToUserTopic(user!.email!);
+
+        // 🔍 Fetch user data from Firestore
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data()!;
+          final isBlocked = data['isBlocked'] ?? false;
+
+          if (isBlocked == true) {
+            AppLoggerHelper.logInfo('Blocked user attempted to sign in: $uid');
+
+            // 🔐 Sign out the blocked user
+            await _auth.signOut();
+            await GoogleSignIn().signOut();
+
+            _setLoadingState(false);
+            notifyListeners();
+
+            // 📌 Show dialog
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Access Denied'),
+                content: const Text(
+                  'Your account has been blocked. Please contact support.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+
+            return AppStatus.kFailed;
+          } else {
+            // Store user data and start listening to updates
+            userData = UsersModel.fromFirestore(data);
+            _startUserDataListener();
+
+            // Navigate to appropriate screen based on user data
+            _setLoadingState(false);
+            AppRouter.replace(context, ChatScreen());
+            notifyListeners();
+            return AppStatus.kSuccess;
+          }
+        } else {
+          // User document doesn't exist, navigate to basic user details
+          _setLoadingState(false);
+          notifyListeners();
+          AppRouter.replace(context, BasicUserDetailsFormScreen());
+          return AppStatus.kSuccess;
+        }
       }
 
+      AppLoggerHelper.logError(
+        'Firebase returned null user after Google sign-in.',
+      );
       _setLoadingState(false);
       notifyListeners();
       return AppStatus.kFailed;
     } on FirebaseAuthException catch (e) {
       _setLoadingState(false);
-      print("Google sign-in error: ${e.code} - ${e.message}");
+      AppLoggerHelper.logError(
+        'FirebaseAuthException during Google sign-in: ${e.code} - ${e.message}',
+      );
       notifyListeners();
       return e.message ?? AppStatus.kFailed;
     } catch (e) {
       _setLoadingState(false);
-      print("Google sign-in error: $e");
+      AppLoggerHelper.logError('Unexpected error during Google sign-in: $e');
       notifyListeners();
       return AppStatus.kFailed;
     }
@@ -283,24 +421,6 @@ class MyAuthProvider extends ChangeNotifier {
         // Continue even if email verification fails
       }
 
-      // await _notificationService.storeDeviceToken(uid: uid);
-      // if (userCredential != null) {
-      //   if (userCredential!.user != null) {
-      //     userData = UsersModel.fromFirestore(
-      //       (await FirebaseFirestore.instance
-      //               .collection('users')
-      //               .doc(userCredential!.user!.uid)
-      //               .get())
-      //           .data()!,
-      //     );
-      //     _setLoadingState(false);
-      //     notifyListeners();
-      //     return AppStatus.kSuccess;
-      //   }
-      //   _setLoadingState(false);
-      //   notifyListeners();
-      //   return AppStatus.kFailed;
-      // } else {
       _setLoadingState(false);
       notifyListeners();
       return AppStatus.kSuccess;
@@ -320,17 +440,64 @@ class MyAuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<String> resetPassword({required String email}) async {
+    try {
+      _setLoadingState(true);
+      // Check if the email exists in Firestore
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await _auth.setLanguageCode("en");
+        await _auth.sendPasswordResetEmail(email: email);
+        _setLoadingState(false);
+        return AppStatus.kSuccess;
+      } else {
+        _setLoadingState(false);
+        return AppStatus.kEmailNotFound;
+      }
+    } catch (e) {
+      _setLoadingState(false);
+      debugPrint("Reset password error: $e");
+      return "Password reset failed. Try again.";
+    }
+  }
+
   Future<void> signOut(BuildContext context) async {
     try {
+      _setLoadingState(true);
+
+      // Stop listening to user data updates
+      _stopUserDataListener();
+
       await _notificationService.unsubscribeFromUserTopic(user!.email!);
-      AppRouter.offAll(context, AuthLoginScreen());
+
       await _auth.signOut();
       if (await GoogleSignIn().isSignedIn()) {
         await GoogleSignIn().signOut();
       }
-      // Navigate after successful sign-out
+      AppRouter.offAll(context, AuthLoginScreen());
+
+      // Clear user data
+      user = null;
+      userData = null;
+
+      _setLoadingState(false);
     } catch (e) {
       print("Sign-out error: $e");
     }
+  }
+
+  @override
+  void dispose() {
+    // Clean up resources
+    _stopUserDataListener();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    userNameController.dispose();
+    super.dispose();
   }
 }

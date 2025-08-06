@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:intl/intl.dart';
+import 'package:skin_app_migration/core/helpers/app_logger.dart';
+import 'package:skin_app_migration/core/theme/app_styles.dart';
 
-
-class DateInputField extends StatelessWidget {
+class DateInputField extends StatefulWidget {
   const DateInputField({
     super.key,
     required this.controller,
@@ -17,14 +17,37 @@ class DateInputField extends StatelessWidget {
   final DateTime? initialValue;
 
   @override
+  State<DateInputField> createState() => _DateInputFieldState();
+}
+
+class _DateInputFieldState extends State<DateInputField> {
+  @override
+  void initState() {
+    AppLoggerHelper.logInfo(widget.controller.text);
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppStyles.hMargin),
       child: FormBuilderDateTimePicker(
+        onChanged: (value) {
+          if (value != null) {
+            widget.controller.text = DateFormat("dd/MM/yyyy").format(value);
+          }
+          setState(() {});
+        },
         autovalidateMode: AutovalidateMode.onUserInteraction,
-        controller: controller,
+        controller: widget.controller,
         name: "DOB",
-        initialValue: initialValue,
+        initialValue:
+            widget.initialValue ??
+            (widget.controller.text.trim().isEmpty
+                ? DateTime.now()
+                : DateFormat(
+                    "dd/MM/yyyy",
+                  ).parse(widget.controller.text.trim())),
         firstDate: DateTime(1900),
         lastDate: DateTime.now(),
         inputType: InputType.date,
