@@ -17,8 +17,6 @@ import 'package:skin_app_migration/features/auth/screens/auth_login_screen.dart'
 import 'package:skin_app_migration/features/auth/screens/email_verification_screen.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_google_auth_button.dart';
 import 'package:skin_app_migration/features/auth/widgets/k_or_bar.dart';
-import 'package:skin_app_migration/features/message/screens/chat_screen.dart';
-import 'package:skin_app_migration/features/profile/screens/basic_user_details_form_screen.dart';
 
 class AuthRegisterationScreen extends StatefulWidget {
   const AuthRegisterationScreen({super.key});
@@ -150,53 +148,7 @@ class _AuthRegisterationScreenState extends State<AuthRegisterationScreen> {
               ///OAuthButton
               KGoogleAuthButton(
                 onPressed: () async {
-                  final result = await context.readAuthProvider
-                      .signInWithGoogle(context);
-                  if (!context.mounted) return;
-                  switch (result) {
-                    case AppStatus.kBlocked:
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text("User Blocked"),
-                            content: Text(
-                              "Please contact the Admin for more information",
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => AppRouter.back(context),
-                                child: Text("ok"),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    case AppStatus.kEmailAlreadyExists:
-                      AppRouter.replace(context, ChatScreen());
-                      ToastHelper.showSuccessToast(
-                        context: context,
-                        message: "Login Successful",
-                      );
-
-                      break;
-
-                    case AppStatus.kSuccess:
-                      AppRouter.replace(context, BasicUserDetailsFormScreen());
-                      break;
-
-                    case AppStatus.kFailed:
-                      ToastHelper.showErrorToast(
-                        context: context,
-                        message: "Login Failed",
-                      );
-                      break;
-
-                    default:
-                      print("Google Auth Result: $result");
-
-                      break;
-                  }
+                  await context.readAuthProvider.signInWithGoogle(context);
                 },
                 text: 'continue with google',
               ),

@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:skin_app_migration/core/constants/app_assets.dart';
 import 'package:skin_app_migration/core/extensions/provider_extensions.dart';
+import 'package:skin_app_migration/core/router/app_router.dart';
 import 'package:skin_app_migration/core/theme/app_styles.dart';
 import 'package:skin_app_migration/core/widgets/k_background_scaffold.dart';
 import 'package:skin_app_migration/features/message/models/chat_message_model.dart';
@@ -164,8 +165,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      child: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
+      child: Consumer2<ChatProvider, MyAuthProvider>(
+        builder: (context, chatProvider, myAuthProvider, child) {
           return KBackgroundScaffold(
             loading: context.readAuthProvider.isLoading,
             margin: const EdgeInsets.all(0),
@@ -221,48 +222,89 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-            body: Column(
-              children: [
-                if (chatProvider.imageMetadata != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Shared: ${chatProvider.imageMetadata}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+            body: myAuthProvider.userData!.isBlocked
+                ? Column(
+                    children: [
+                      Icon(Icons.block, color: Colors.red, size: 48),
+                      SizedBox(height: 16),
+                      Text(
+                        "Account Blocked",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        "Your account has been blocked and you cannot access the chat. Please contact support for more information.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            AppRouter.back(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text("OK"),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      if (chatProvider.imageMetadata != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Shared: ${chatProvider.imageMetadata}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: chatProvider.clearMetadata,
+                                icon: const Icon(Icons.close, size: 16),
+                              ),
+                            ],
                           ),
                         ),
-                        IconButton(
-                          onPressed: chatProvider.clearMetadata,
-                          icon: const Icon(Icons.close, size: 16),
-                        ),
-                      ],
-                    ),
+                      Expanded(child: _buildMessagesList()),
+                      Consumer<MyAuthProvider>(
+                        builder: (context, authProvider, child) {
+                          return !(authProvider.userData?.canPost ?? false)
+                              ? SizedBox(height: 0.050.sh)
+                              : MessageTextField(
+                                  messageController:
+                                      chatProvider.messageController,
+                                );
+                        },
+                      ),
+                    ],
                   ),
-                Expanded(child: _buildMessagesList()),
-                Consumer<MyAuthProvider>(
-                  builder: (context, authProvider, child) {
-                    return !(authProvider.userData?.canPost ?? false)
-                        ? SizedBox(height: 0.050.sh)
-                        : MessageTextField(
-                            messageController: chatProvider.messageController,
-                          );
-                  },
-                ),
-              ],
-            ),
           );
         },
       ),

@@ -44,6 +44,7 @@ class MyAuthProvider extends ChangeNotifier {
   // Method to start listening to user data changes
   void _startUserDataListener() {
     if (user == null) return;
+    AppLoggerHelper.logInfo("Starting listener ...............");
 
     // Cancel existing subscription if any
     _userDataSubscription?.cancel();
@@ -121,12 +122,12 @@ class MyAuthProvider extends ChangeNotifier {
 
       if (user == null) {
         AppRouter.replace(context, AuthLoginScreen());
-      } else if (!user!.emailVerified) {
+      } else if (!(user!.emailVerified)) {
         // Check email verification with network fallback
         try {
           await user!.reload();
           user = FirebaseAuth.instance.currentUser;
-          if (!user!.emailVerified) {
+          if (!(user!.emailVerified)) {
             AppRouter.replace(context, EmailVerificationScreen());
           } else {
             // Email was verified, continue to next step
@@ -152,6 +153,7 @@ class MyAuthProvider extends ChangeNotifier {
 
   Future<void> _proceedToUserDataCheck(context) async {
     try {
+      print(user!.uid);
       // Try to get user data from Firestore
       DocumentSnapshot tempData = await FirebaseFirestore.instance
           .collection('users')
@@ -318,11 +320,12 @@ class MyAuthProvider extends ChangeNotifier {
 
         if (docSnapshot.exists) {
           final data = docSnapshot.data()!;
+
+          AppLoggerHelper.logInfo(data.values.toString());
           final isBlocked = data['isBlocked'] ?? false;
 
           if (isBlocked == true) {
             AppLoggerHelper.logInfo('Blocked user attempted to sign in: $uid');
-
             // 🔐 Sign out the blocked user
             await _auth.signOut();
             await GoogleSignIn().signOut();
@@ -349,13 +352,31 @@ class MyAuthProvider extends ChangeNotifier {
 
             return AppStatus.kFailed;
           } else {
+            AppLoggerHelper.logInfo("After google auth In the else block");
             // Store user data and start listening to updates
             userData = UsersModel.fromFirestore(data);
-            _startUserDataListener();
+            final user = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .get();
+
+            AppLoggerHelper.logInfo(
+              "In the else block ${user.data()!.values.toString()}",
+            );
 
             // Navigate to appropriate screen based on user data
             _setLoadingState(false);
-            AppRouter.replace(context, ChatScreen());
+            if (userData != null) {
+              AppLoggerHelper.logInfo(
+                "After checking the user data in the else block",
+              );
+              AppRouter.replace(context, ChatScreen());
+              AppLoggerHelper.logInfo(
+                "After checking the user data in the else block....",
+              );
+              _startUserDataListener();
+            }
+
             notifyListeners();
             return AppStatus.kSuccess;
           }
@@ -467,7 +488,7 @@ class MyAuthProvider extends ChangeNotifier {
 
   Future<void> signOut(BuildContext context) async {
     try {
-      _setLoadingState(true);
+      AppRouter.offAll(context, AuthLoginScreen());
 
       // Stop listening to user data updates
       _stopUserDataListener();
@@ -478,13 +499,10 @@ class MyAuthProvider extends ChangeNotifier {
       if (await GoogleSignIn().isSignedIn()) {
         await GoogleSignIn().signOut();
       }
-      AppRouter.offAll(context, AuthLoginScreen());
 
       // Clear user data
       user = null;
       userData = null;
-
-      _setLoadingState(false);
     } catch (e) {
       print("Sign-out error: $e");
     }

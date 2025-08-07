@@ -192,11 +192,15 @@ class _BasicUserDetailsFormScreenState
 
                         if (authProvider.user!.providerData.first.providerId ==
                             "google.com") {
-                          final userData = await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(context.readAuthProvider.user!.uid)
-                              .get();
-                          if (userData.exists) {
+                          authProvider.userData = UsersModel.fromFirestore(
+                            (await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(context.readAuthProvider.user!.uid)
+                                    .get())
+                                .data()!,
+                          );
+
+                          if (authProvider.userData != null) {
                             AppLoggerHelper.logInfo(
                               "Before navigating to the chat screen",
                             );

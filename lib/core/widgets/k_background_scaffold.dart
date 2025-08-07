@@ -93,8 +93,9 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                       ),
                       accountEmail: Text(context.readAuthProvider.user!.email!),
                       accountName: Text(
-                        context.readAuthProvider.user!.displayName ??
-                            context.readAuthProvider.userData!.username,
+                        context.readAuthProvider.userData!.isGoogle!
+                            ? context.readAuthProvider.user!.displayName ?? ""
+                            : context.readAuthProvider.userData!.username,
                       ),
                       decoration: BoxDecoration(color: AppStyles.primary),
                     ),
@@ -151,6 +152,7 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                               AppRouter.to(context, EditProfileScreen());
                             },
                           ),
+
                           if (context.readAuthProvider.userData!.role ==
                               "super_admin")
                             ListTile(
@@ -222,31 +224,24 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                                       ),
                                     ),
 
-                                    actions: context.watchAuthProvider.isLoading
-                                        ? [
-                                            Center(
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            ),
-                                          ]
-                                        : [
-                                            TextButton(
-                                              onPressed: () {
-                                                AppRouter.back(context);
-                                              },
-                                              child: Text("No"),
-                                            ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          AppRouter.back(context);
+                                        },
+                                        child: Text("No"),
+                                      ),
 
-                                            TextButton(
-                                              onPressed: () {
-                                                Provider.of<MyAuthProvider>(
-                                                  context,
-                                                  listen: false,
-                                                ).signOut(context);
-                                              },
-                                              child: Text("Yes"),
-                                            ),
-                                          ],
+                                      TextButton(
+                                        onPressed: () {
+                                          Provider.of<MyAuthProvider>(
+                                            context,
+                                            listen: false,
+                                          ).signOut(context);
+                                        },
+                                        child: Text("Yes"),
+                                      ),
+                                    ],
                                   );
                                 },
                               );
