@@ -17,7 +17,7 @@ import 'package:skin_app_migration/features/super_admin/provider/super_admin_pro
 import 'core/theme/app_styles.dart';
 import 'firebase_options.dart';
 
-// Outside any class
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   AppLoggerHelper.logInfo(message.data.entries.toString());

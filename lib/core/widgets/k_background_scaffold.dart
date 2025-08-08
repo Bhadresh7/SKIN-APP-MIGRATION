@@ -93,9 +93,9 @@ class _BackgroundScaffoldState extends State<KBackgroundScaffold> {
                       ),
                       accountEmail: Text(context.readAuthProvider.user!.email!),
                       accountName: Text(
-                        context.readAuthProvider.userData!.isGoogle!
-                            ? context.readAuthProvider.user!.displayName ?? ""
-                            : context.readAuthProvider.userData!.username,
+                        context.readAuthProvider.userData!.username ??
+                            context.readAuthProvider.user!.displayName ??
+                            "Unkownn",
                       ),
                       decoration: BoxDecoration(color: AppStyles.primary),
                     ),

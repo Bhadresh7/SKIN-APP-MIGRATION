@@ -12,6 +12,7 @@ import 'package:skin_app_migration/core/widgets/k_custom_button.dart';
 import 'package:skin_app_migration/core/widgets/k_custom_input_field.dart';
 import 'package:skin_app_migration/core/widgets/k_date_input_field.dart';
 import 'package:skin_app_migration/features/auth/providers/my_auth_provider.dart';
+import 'package:skin_app_migration/features/profile/models/user_model.dart';
 
 import '../../../core/extensions/provider_extensions.dart';
 import '../../../core/provider/image_picker_provider.dart';
@@ -121,6 +122,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'dob': dateController.text.trim(),
       if (imageUrl != null) 'imageUrl': imageUrl,
     });
+    Provider.of<MyAuthProvider>(
+      context,
+      listen: false,
+    ).userData = UsersModel.fromFirestore(
+      (await FirebaseFirestore.instance.collection('users').doc(userId).get())
+              .data()
+          as Map<String, dynamic>,
+    );
 
     imagePickerProvider.clear();
     isUpdateEnabled.value = false;

@@ -268,34 +268,34 @@ class _ChatScreenState extends State<ChatScreen> {
                   )
                 : Column(
                     children: [
-                      if (chatProvider.imageMetadata != null)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Shared: ${chatProvider.imageMetadata}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: chatProvider.clearMetadata,
-                                icon: const Icon(Icons.close, size: 16),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // if (chatProvider.imageMetadata != null)
+                      // Container(
+                      //   width: double.infinity,
+                      //   padding: const EdgeInsets.all(12),
+                      //   margin: const EdgeInsets.all(8),
+                      //   decoration: BoxDecoration(
+                      //     color: Theme.of(
+                      //       context,
+                      //     ).colorScheme.surfaceContainerHighest,
+                      //     borderRadius: BorderRadius.circular(8),
+                      //   ),
+                      //   child: Row(
+                      //     children: [
+                      //       Expanded(
+                      //         child: Text(
+                      //           'Shared: ${chatProvider.imageMetadata}',
+                      //           style: Theme.of(context).textTheme.bodySmall,
+                      //           maxLines: 1,
+                      //           overflow: TextOverflow.ellipsis,
+                      //         ),
+                      //       ),
+                      //       IconButton(
+                      //         onPressed: chatProvider.clearMetadata,
+                      //         icon: const Icon(Icons.close, size: 16),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                       Expanded(child: _buildMessagesList()),
                       Consumer<MyAuthProvider>(
                         builder: (context, authProvider, child) {
@@ -367,7 +367,10 @@ class _ChatScreenState extends State<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => ImagePreviewScreen(image: _temp),
+          builder: (context) => ImagePreviewScreen(
+            image: _temp,
+            initialText: chatProvider.sharedIntentText,
+          ),
         ),
       );
       print("nulling sharing file.....");

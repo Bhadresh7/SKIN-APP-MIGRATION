@@ -27,7 +27,7 @@ class _ChatBubbleState extends State<ChatBubble> {
   @override
   void initState() {
     super.initState();
-    final senderDoc = FirebaseFirestore.instance
+    FirebaseFirestore.instance
         .collection('users')
         .doc(widget.chatMessage.senderId)
         .get()
@@ -128,14 +128,27 @@ class _ChatBubbleState extends State<ChatBubble> {
     final maxWidth = MediaQuery.of(context).size.width * 0.6;
 
     Widget content;
-
+    ////$$$$$$$$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%% handle more option in chat bubble here%%%%%%%%%%%%%%%%%%$$$$$$$$$$$$$$$$$$$$$
     if (isImage) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: widget.chatMessage.metadata!.img!,
-          fit: BoxFit.cover,
-        ),
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: widget.chatMessage.metadata!.img!,
+              fit: BoxFit.cover,
+            ),
+          ),
+          if (widget.chatMessage.metadata!.text != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 6.0),
+              child: Text(
+                widget.chatMessage.metadata!.text!,
+                style: TextStyle(color: textColor, fontSize: 16),
+              ),
+            ),
+        ],
       );
     } else if (isUrl && metadata != null) {
       content = Column(

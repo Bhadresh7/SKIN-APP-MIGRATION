@@ -60,8 +60,8 @@ class _MessageTextFieldState extends State<MessageTextField> {
       senderId: context.readAuthProvider.user?.uid ?? 'unknown',
       createdAt: DateTime.now().millisecondsSinceEpoch,
       name:
-          context.readAuthProvider.user?.displayName ??
           context.readAuthProvider.userData?.username ??
+          context.readAuthProvider.user?.displayName ??
           'Unknown',
       messageId: '',
     );

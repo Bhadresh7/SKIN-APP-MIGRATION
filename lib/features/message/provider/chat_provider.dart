@@ -191,24 +191,27 @@ class ChatProvider extends ChangeNotifier {
       AppLoggerHelper.logInfo('Handling intent: ${intent.action}');
 
       // Handle different types of intents
-      String? intentText;
 
       // Try to get text from different possible keys
-      intentText = intent.extra?['android.intent.extra.TEXT']?.toString();
-      if (intentText != null && intentText.isNotEmpty) {
-        _receivedText = intentText;
-        _imageMetadata = intentText;
+      sharedIntentText = intent.extra?['android.intent.extra.TEXT']?.toString();
+      if (sharedIntentText != null) {
+        if (sharedIntentText!.isNotEmpty) {
+          _receivedText = sharedIntentText;
+          _imageMetadata = sharedIntentText;
 
-        // Set the text to the message controller
-        // messageController.text = intentText;
+          // Set the text to the message controller
+          // messageController.text = intentText;
 
-        AppLoggerHelper.logInfo('Received text from intent: $intentText');
+          AppLoggerHelper.logInfo(
+            'Received text from intent: $sharedIntentText',
+          );
 
-        notifyListeners();
+          notifyListeners();
 
-        if (_isValidUrl(intentText)) {
-          AppLoggerHelper.logInfo('Valid URL detected, fetching metadata...');
-          fetchLinkMetadata(intentText);
+          if (_isValidUrl(sharedIntentText!)) {
+            AppLoggerHelper.logInfo('Valid URL detected, fetching metadata...');
+            fetchLinkMetadata(sharedIntentText!);
+          }
         }
       }
     } catch (e) {

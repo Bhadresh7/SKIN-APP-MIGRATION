@@ -157,10 +157,16 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
                                           context.readAuthProvider.user!.uid,
                                       createdAt:
                                           DateTime.now().millisecondsSinceEpoch,
-                                      name: context
-                                          .readAuthProvider
-                                          .userData!
-                                          .username,
+                                      name:
+                                          context
+                                              .readAuthProvider
+                                              .userData!
+                                              .username ??
+                                          context
+                                              .readAuthProvider
+                                              .user!
+                                              .displayName ??
+                                          "UnKnown",
                                     ).toJson(),
                                   );
 

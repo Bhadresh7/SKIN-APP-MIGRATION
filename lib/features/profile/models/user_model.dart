@@ -20,7 +20,7 @@ class UsersModel {
   });
 
   final String uid;
-  final String username;
+  final String? username;
   final String email;
   String? password;
   bool? isGoogle;
@@ -61,7 +61,7 @@ class UsersModel {
   factory UsersModel.fromFirestore(Map<String, dynamic> data) {
     return UsersModel(
       uid: data['uid'] ?? '',
-      username: data['username'] ?? '',
+      username: data['username'],
       email: data['email'] ?? '',
       password: data['password'],
       role: data['role'] ?? '',

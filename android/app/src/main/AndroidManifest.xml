@@ -91,9 +91,8 @@
         </service>
 
         <!-- Firebase messaging channel -->
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="default_notification_channel" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/your_channel_id"/>
 
         <!-- Firebase notification icon -->
         <meta-data
