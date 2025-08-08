@@ -16,6 +16,7 @@ class UsersModel {
     required this.dob,
     this.createdAt,
     this.imageUrl,
+    this.isImgSkipped = false,
   });
 
   final String uid;
@@ -27,6 +28,7 @@ class UsersModel {
   final bool isAdmin;
   bool canPost;
   bool isBlocked;
+  bool isImgSkipped;
 
   final String mobileNumber;
   final String dob;
@@ -51,6 +53,7 @@ class UsersModel {
           ? TimestampHelper.stringToTimestamp(createdAt)
           : FieldValue.serverTimestamp(),
       'imageUrl': imageUrl,
+      'isImgSkipped': isImgSkipped,
     };
   }
 
@@ -72,6 +75,7 @@ class UsersModel {
           ? TimestampHelper.timestampToString(data['createdAt'] as Timestamp)
           : null,
       imageUrl: data['imageUrl'],
+      isImgSkipped: data['isImgSkipped'] ?? false,
     );
   }
 
@@ -92,6 +96,7 @@ Users {
   dob: $dob,
   createdAt: $createdAt,
   imageUrl: ${imageUrl ?? 'N/A'},
+  isImgSkipped: ${isImgSkipped},
 }
 ''';
   }

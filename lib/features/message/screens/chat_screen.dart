@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:skin_app_migration/features/message/widgets/chat_bubble.dart';
 
 import '../../auth/providers/my_auth_provider.dart';
 import '../widgets/message_text_field.dart';
+import 'image_preview_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -26,8 +28,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessageModel> _messages = [];
-  final List<DocumentSnapshot> _documents =
-      []; // Track documents for pagination
+  final List<DocumentSnapshot> _documents = [];
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
   static const int _pageSize = 20;
@@ -167,6 +168,9 @@ class _ChatScreenState extends State<ChatScreen> {
       canPop: false,
       child: Consumer2<ChatProvider, MyAuthProvider>(
         builder: (context, chatProvider, myAuthProvider, child) {
+          ///Handling Shared image here
+          handleIntent(context);
+
           return KBackgroundScaffold(
             loading: context.readAuthProvider.isLoading,
             margin: const EdgeInsets.all(0),
@@ -348,5 +352,27 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       },
     );
+  }
+
+  void handleIntent(BuildContext context) {
+    ChatProvider chatProvider = Provider.of<ChatProvider>(
+      context,
+      listen: false,
+    );
+
+    if (chatProvider.sharedIntentFile == null) return;
+    print("handling sharing file.....");
+    File _temp = chatProvider.sharedIntentFile!;
+    print("pushing sharing file.....");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ImagePreviewScreen(image: _temp),
+        ),
+      );
+      print("nulling sharing file.....");
+
+      chatProvider.sharedIntentFile = null;
+    });
   }
 }

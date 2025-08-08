@@ -42,6 +42,10 @@ class _ImageSetupScreenState extends State<ImageSetupScreen> {
                   alignment: Alignment.topRight,
                   child: TextButton(
                     onPressed: () async {
+                      FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(context.readAuthProvider.user!.uid)
+                          .update({'isImgSkipped': true});
                       context.readAuthProvider.userData =
                           UsersModel.fromFirestore(
                             (await FirebaseFirestore.instance

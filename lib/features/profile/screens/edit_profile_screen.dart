@@ -31,6 +31,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController dateController = TextEditingController();
   final ValueNotifier<bool> isUpdateEnabled = ValueNotifier(false);
   bool isLoading = true;
+  bool isUpdating = false;
 
   late ImagePickerProvider imagePickerProvider;
   String? _userId;
@@ -54,7 +55,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         .doc(userId)
         .get();
     final data = doc.data();
-
+    imagePickerProvider.selectProfileImage = null;
     if (data != null) {
       usernameController.text = data['username'] ?? '';
       mobileNumberController.text = data['mobileNumber'] ?? '';
@@ -76,7 +77,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _checkForChanges() {
     final currentUser = context.readAuthProvider.userData;
-    final selectedImage = context.readImagePickerProvider.selectedImage;
+    final selectedImage = context.readImagePickerProvider.selectProfileImage;
 
     final isChanged =
         usernameController.text.trim() != (currentUser?.username ?? "user") ||
@@ -107,7 +108,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (userId == null) return;
 
     String? imageUrl;
-    final pickedImage = imagePickerProvider.selectedImage;
+    final pickedImage = imagePickerProvider.selectProfileImage;
+    isUpdating = true;
+    setState(() {});
     if (pickedImage != null) {
       imageUrl = await _uploadImage(pickedImage, userId);
     }
@@ -121,7 +124,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     imagePickerProvider.clear();
     isUpdateEnabled.value = false;
-
+    isUpdating = false;
+    setState(() {});
     if (context.mounted) {
       ToastHelper.showSuccessToast(
         context: context,
@@ -152,24 +156,46 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  GestureDetector(
-                    onTap: () async {
-                      await imagePickerProvider.pickImage();
-                    },
-                    child: CircleAvatar(
-                      radius: 0.3.sw,
-                      backgroundImage: imagePickerProvider.selectedImage != null
-                          ? FileImage(imagePickerProvider.selectedImage!)
-                          : authProvider.userData!.isGoogle!
-                          ? NetworkImage(
-                              context.readAuthProvider.user!.photoURL!,
-                            )
-                          : authProvider.userData!.imageUrl != null
-                          ? NetworkImage(
-                              context.readAuthProvider.userData!.imageUrl!,
-                            )
-                          : AssetImage(AppAssets.profileImage),
-                    ),
+                  Stack(
+                    children: [
+                      Center(
+                        child: Consumer<ImagePickerProvider>(
+                          builder: (context, imgPickerProvider, _) {
+                            return CircleAvatar(
+                              radius: 0.3.sw,
+                              backgroundImage:
+                                  imgPickerProvider.selectProfileImage != null
+                                  ? FileImage(
+                                      imgPickerProvider.selectProfileImage!,
+                                    )
+                                  : authProvider.userData!.imageUrl != null
+                                  ? NetworkImage(
+                                      context
+                                          .readAuthProvider
+                                          .userData!
+                                          .imageUrl!,
+                                    )
+                                  : authProvider.userData!.isGoogle!
+                                  ? NetworkImage(
+                                      context.readAuthProvider.user!.photoURL!,
+                                    )
+                                  : AssetImage(AppAssets.profileImage),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        top: -0,
+                        left: (MediaQuery.of(context).size.width / 2) + 20,
+                        // right: -10,
+                        child: GestureDetector(
+                          onTap: () async {
+                            await imagePickerProvider.pickProfileImage();
+                          },
+                          child: CircleAvatar(child: Icon(Icons.edit)),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   KCustomInputField(
@@ -191,17 +217,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                   DateInputField(controller: dateController),
                   const SizedBox(height: 30),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: isUpdateEnabled,
-                    builder: (context, enabled, _) {
-                      return KCustomButton(
-                        text: "Update",
-                        onPressed: () {
-                          _handleUpdate();
-                        },
-                      );
-                    },
-                  ),
+                  isUpdating
+                      ? Center(child: CircularProgressIndicator())
+                      : ValueListenableBuilder<bool>(
+                          valueListenable: isUpdateEnabled,
+                          builder: (context, enabled, _) {
+                            return !enabled
+                                ? SizedBox()
+                                : KCustomButton(
+                                    text: "Update",
+                                    onPressed: () {
+                                      _handleUpdate();
+                                    },
+                                  );
+                          },
+                        ),
                 ],
               ),
             ),

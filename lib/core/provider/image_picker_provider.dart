@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -15,6 +14,7 @@ import '../constants/app_status.dart';
 
 class ImagePickerProvider extends ChangeNotifier {
   File? selectedImage;
+  File? selectProfileImage;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -23,6 +23,18 @@ class ImagePickerProvider extends ChangeNotifier {
     if (pickedFile != null) {
       selectedImage = File(pickedFile.path);
       debugPrint("Selected Image Path: ${selectedImage!.path}");
+      notifyListeners();
+      return AppStatus.kSuccess;
+    } else {
+      return AppStatus.kFailed;
+    }
+  }
+
+  Future<String> pickProfileImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      selectProfileImage = File(pickedFile.path);
+      debugPrint("Selected Profile Image Path: ${selectProfileImage!.path}");
       notifyListeners();
       return AppStatus.kSuccess;
     } else {
@@ -114,7 +126,7 @@ class ImagePickerProvider extends ChangeNotifier {
 
   bool isUploading = false;
 
-  Future<String?> uploadImageToFirebase(String userId,context) async {
+  Future<String?> uploadImageToFirebase(String userId, context) async {
     if (selectedImage == null) return AppStatus.kFailed;
 
     isUploading = true;
@@ -164,9 +176,14 @@ class ImagePickerProvider extends ChangeNotifier {
       // await HiveService.updateUserImageInHive(downloadUrl);
       // Step 4: Update Firestore document
       await docToUpdate.update({"imageUrl": downloadUrl});
-      MyAuthProvider authProvider=Provider.of<MyAuthProvider>(context);
-      DocumentSnapshot _doc = await FirebaseFirestore.instance.collection('users').doc(authProvider.user!.uid).get();
-      authProvider.userData=UsersModel.fromFirestore(_doc.data() as Map<String,dynamic>);
+      MyAuthProvider authProvider = Provider.of<MyAuthProvider>(context);
+      DocumentSnapshot _doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(authProvider.user!.uid)
+          .get();
+      authProvider.userData = UsersModel.fromFirestore(
+        _doc.data() as Map<String, dynamic>,
+      );
       print("✅ imageUrl updated for $userId: $downloadUrl");
 
       return downloadUrl;

@@ -3,11 +3,7 @@ class AppText {
       """The members of this platform are specialists in the field of Human Resource Management, Industrial Relations, Labor Welfare, Training and Development, Law & Order, Subject Experts and Placement & Career Consultant with expertise in conducting Development Programs, Behavioral, Soft-Skill, Quality and Technical training programs. Professionals willing or wanting to do training/gain knowledge may join S.K.I.N.
 
 With a view to enhance knowledge & Information, S.K.I.N organizes regular Monthly Meetings, Discussions, Group chats, Debates, Seminars, Presentations, Workshops and Trainings.
-
-Eminent professionals who have excelled in their respective field are invited as Guest speakers to share their rich experience and knowledge with the members in the monthly meetings.
-
-S.K.I.N also endeavors to bring about synergy between Industries, Govt Officials, Administrators, Educational institutions and SME, by inviting experts from various industries to share their knowledge & Information among the Professionals, to enhance potential and to utilize the services of its members.
-
+share
 S.K.I.N constantly endeavors to redefine the benchmarks and delivers programs for Professional and People Excellence through well-defined people processes, thereby facilitating the professionals to bring about Organizational Development at par with international standards.""";
   static final String privacyPolicy = """
 Privacy Policy

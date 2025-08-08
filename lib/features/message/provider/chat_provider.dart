@@ -8,10 +8,10 @@ import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
 import 'package:receive_intent/receive_intent.dart' as receive_intent;
 import 'package:skin_app_migration/core/helpers/app_logger.dart';
+import 'package:skin_app_migration/core/helpers/fetch_metadata_helper.dart';
 import 'package:skin_app_migration/core/service/local_db_service.dart';
 
 import '../models/chat_message_model.dart';
-import '../screens/image_preview_screen.dart';
 
 class ChatProvider extends ChangeNotifier {
   // Sharing intent
@@ -20,6 +20,8 @@ class ChatProvider extends ChangeNotifier {
   List<String> sharedValues = [];
   final TextEditingController messageController = TextEditingController();
   LocalDBService localDBService = LocalDBService();
+  File? sharedIntentFile;
+  String? sharedIntentText;
 
   String? _receivedText;
   bool _isLoadingMetadata = false;
@@ -32,8 +34,11 @@ class ChatProvider extends ChangeNotifier {
 
   // Public getters
   List<ChatMessageModel> get messages => _messages;
+
   bool get isLoadingMetadata => _isLoadingMetadata;
+
   String? get imageMetadata => _imageMetadata;
+
   String? get receivedText => _receivedText;
 
   // ==== SHARING INTENT HANDLING ====
@@ -50,8 +55,18 @@ class ChatProvider extends ChangeNotifier {
               AppLoggerHelper.logInfo(
                 'Received ${files.length} shared files from media stream',
               );
-              if (context.mounted) {
-                _updateSharedFiles(files, context);
+
+              print("###############################${files.first}");
+
+              ///Handling shared text here
+              if (files.first.type == SharedMediaType.TEXT) {
+                messageController.text = files.first.value!;
+              }
+              ///setting a shared image here handled in chatscreen
+              else if (files.first.type == SharedMediaType.IMAGE) {
+                sharedIntentFile = File(files.first.value!);
+                // sharedIntentText = files.first.value!;
+                notifyListeners();
               }
             },
             onError: (err) {
@@ -67,7 +82,7 @@ class ChatProvider extends ChangeNotifier {
               'Received ${files.length} files from initial sharing',
             );
             if (files.isNotEmpty) {
-              _updateSharedFiles(files, context);
+              // _updateSharedFiles(files, context);
             }
           })
           .catchError((err) {
@@ -80,81 +95,77 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  void _updateSharedFiles(List<SharedFile> files, BuildContext context) {
-    try {
-      final newSharedValues = files.map((file) => file.value ?? "").toList();
-
-      AppLoggerHelper.logInfo(
-        'Updating shared files. New values: $newSharedValues',
-      );
-
-      if (sharedValues != newSharedValues) {
-        sharedFiles = files;
-        sharedValues = newSharedValues;
-        notifyListeners();
-
-        // Process shared files
-        if (files.isNotEmpty) {
-          for (final file in files) {
-            AppLoggerHelper.logInfo(
-              'Processing shared file: ${file.type} - ${file.value}',
-            );
-
-            if (file.type == SharedMediaType.TEXT) {
-              final textValue = file.value ?? "";
-              if (textValue.isNotEmpty) {
-                // Set the text to the message controller
-                messageController.text = textValue;
-                _receivedText = textValue;
-
-                AppLoggerHelper.logInfo(
-                  'Set shared text to message controller: $textValue',
-                );
-
-                // Check if it's a URL and fetch metadata
-                if (_isValidUrl(textValue)) {
-                  AppLoggerHelper.logInfo('Detected URL, fetching metadata...');
-                  fetchLinkMetadata(textValue);
-                }
-
-                notifyListeners();
-              }
-            } else if (file.type == SharedMediaType.IMAGE) {
-              final imagePath = file.value;
-              if (imagePath != null && imagePath.isNotEmpty) {
-                AppLoggerHelper.logInfo(
-                  'Navigating to image preview for: $imagePath',
-                );
-
-                // Check if context is still mounted before navigation
-                if (context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ImagePreviewScreen(image: File(imagePath)),
-                    ),
-                  );
-                } else {
-                  AppLoggerHelper.logError(
-                    'Context not mounted, cannot navigate',
-                  );
-                }
-              }
-            }
-          }
-        } else {
-          AppLoggerHelper.logInfo('No shared files to process');
-        }
-      } else {
-        AppLoggerHelper.logInfo('Shared values unchanged, skipping update');
-      }
-    } catch (e) {
-      AppLoggerHelper.logError('Error updating shared files: $e');
-      // Add more specific error details
-      AppLoggerHelper.logError('Stack trace: ${StackTrace.current}');
-    }
-  }
+  // void _updateSharedFiles(List<SharedFile> files, BuildContext context) {
+  //   try {
+  //     final newSharedValues = files.map((file) => file.value ?? "").toList();
+  //     print("NEW VALUESSSSSSS${newSharedValues}");
+  //
+  //     AppLoggerHelper.logInfo(
+  //       'Updating shared files. New values: $newSharedValues',
+  //     );
+  //
+  //     if (sharedValues != newSharedValues) {
+  //       sharedFiles = files;
+  //       sharedValues = newSharedValues;
+  //       print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@$files");
+  //       print("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP$newSharedValues");
+  //       notifyListeners();
+  //
+  //       // Process shared files
+  //       if (files.isNotEmpty) {
+  //         for (final file in files) {
+  //           AppLoggerHelper.logInfo(
+  //             'Processing shared file: ${file.type} - ${file.value}',
+  //           );
+  //
+  //           if (file.type == SharedMediaType.TEXT) {
+  //             final textValue = file.value ?? "";
+  //             if (textValue.isNotEmpty) {
+  //               // Set the text to the message controller
+  //               messageController.text = textValue;
+  //               _receivedText = textValue;
+  //
+  //               AppLoggerHelper.logInfo(
+  //                 'Set shared text to message controller: $textValue',
+  //               );
+  //
+  //               // Check if it's a URL and fetch metadata
+  //               if (_isValidUrl(textValue)) {
+  //                 AppLoggerHelper.logInfo('Detected URL, fetching metadata...');
+  //                 fetchLinkMetadata(textValue);
+  //               }
+  //
+  //               notifyListeners();
+  //             }
+  //           } else if (file.type == SharedMediaType.IMAGE) {
+  //             final imagePath = file.value;
+  //             if (imagePath != null && imagePath.isNotEmpty) {
+  //               AppLoggerHelper.logInfo(
+  //                 'Navigating to image preview for: $imagePath',
+  //               );
+  //               AppRouter.to(
+  //                 context,
+  //                 ImagePreviewScreen(image: File(imagePath)),
+  //               );
+  //             } else {
+  //               AppLoggerHelper.logError(
+  //                 'Context not mounted, cannot navigate',
+  //               );
+  //             }
+  //           }
+  //         }
+  //       } else {
+  //         AppLoggerHelper.logInfo('No shared files to process');
+  //       }
+  //     } else {
+  //       AppLoggerHelper.logInfo('Shared values unchanged, skipping update');
+  //     }
+  //   } catch (e) {
+  //     AppLoggerHelper.logError('Error updating shared files: $e');
+  //     // Add more specific error details
+  //     AppLoggerHelper.logError('Stack trace: ${StackTrace.current}');
+  //   }
+  // }
 
   void initIntentHandling() {
     try {
@@ -175,6 +186,7 @@ class ChatProvider extends ChangeNotifier {
         AppLoggerHelper.logInfo('Received null intent');
         return;
       }
+      print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${intent}");
 
       AppLoggerHelper.logInfo('Handling intent: ${intent.action}');
 
@@ -182,17 +194,13 @@ class ChatProvider extends ChangeNotifier {
       String? intentText;
 
       // Try to get text from different possible keys
-      intentText =
-          intent.extra?['android.intent.extra.TEXT']?.toString() ??
-          intent.extra?['android.intent.extra.SUBJECT']?.toString() ??
-          intent.data?.toString();
-
+      intentText = intent.extra?['android.intent.extra.TEXT']?.toString();
       if (intentText != null && intentText.isNotEmpty) {
         _receivedText = intentText;
         _imageMetadata = intentText;
 
         // Set the text to the message controller
-        messageController.text = intentText;
+        // messageController.text = intentText;
 
         AppLoggerHelper.logInfo('Received text from intent: $intentText');
 
@@ -226,9 +234,7 @@ class ChatProvider extends ChangeNotifier {
       _isLoadingMetadata = true;
       notifyListeners();
 
-      // Simulate metadata fetching
-      await Future.delayed(const Duration(milliseconds: 500));
-
+      FetchMetadataHelper.fetchLinkMetadata(url);
       _isLoadingMetadata = false;
       notifyListeners();
       AppLoggerHelper.logInfo('Metadata fetching completed for: $url');
@@ -252,13 +258,6 @@ class ChatProvider extends ChangeNotifier {
     sharedValues = [];
     _receivedText = null;
     messageController.clear();
-    notifyListeners();
-  }
-
-  // Method to manually set text in message controller
-  void setMessageText(String text) {
-    messageController.text = text;
-    _receivedText = text;
     notifyListeners();
   }
 

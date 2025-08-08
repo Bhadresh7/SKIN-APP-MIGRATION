@@ -139,6 +139,12 @@ class MyAuthProvider extends ChangeNotifier {
           AppRouter.replace(context, EmailVerificationScreen());
         }
       } else {
+        ChatProvider chatProvider = Provider.of<ChatProvider>(
+          context,
+          listen: false,
+        );
+        chatProvider.initializeSharingIntent(context);
+        chatProvider.initIntentHandling();
         await _proceedToUserDataCheck(context);
       }
     } catch (e) {
@@ -171,7 +177,9 @@ class MyAuthProvider extends ChangeNotifier {
         // Start listening to real-time updates
         _startUserDataListener();
 
-        if (!(userData!.isGoogle)! && (userData!.imageUrl) == null) {
+        if (!(userData!.isGoogle)! &&
+            (userData!.imageUrl) == null &&
+            !(userData!.isImgSkipped)) {
           AppRouter.replace(context, ImageSetupScreen());
         } else {
           // Initialize chat provider only after successful auth
@@ -181,12 +189,7 @@ class MyAuthProvider extends ChangeNotifier {
               listen: false,
             );
 
-            // Now it's safe to call DB-related methods
-            chatProvider.initializeSharingIntent(context);
-            chatProvider.initIntentHandling();
-
-            await chatProvider
-                .loadMessages(); // await is optional here unless needed
+            await chatProvider.loadMessages();
             chatProvider.startFirestoreListener();
             await chatProvider.syncNewMessagesFromFirestore();
           } catch (e) {

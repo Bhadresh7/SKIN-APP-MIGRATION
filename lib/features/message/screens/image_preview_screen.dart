@@ -26,10 +26,15 @@ class ImagePreviewScreen extends StatefulWidget {
 class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
   final TextEditingController textController = TextEditingController();
 
+  bool isLoading = false;
+
   @override
   void initState() {
     super.initState();
     // Set initial text if provided
+    print(
+      "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQq${widget.image.path}",
+    );
     if (widget.initialText != null && widget.initialText!.isNotEmpty) {
       textController.text = widget.initialText!;
     }
@@ -46,119 +51,130 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false, // keep layout fixed
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Main image viewer
-          InteractiveViewer(
-            panEnabled: true,
-            minScale: 1.0,
-            maxScale: 4.0,
-            child: Center(child: Image.file(widget.image)),
-          ),
-
-          // Close button
-          Positioned(
-            top: AppStyles.screenHeight(context) * 0.05,
-            left: AppStyles.screenWidth(context) * 0.04,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 28),
-              onPressed: () => AppRouter.back(context),
+      body: WillPopScope(
+        onWillPop: () async {
+          return !isLoading;
+        },
+        child: Stack(
+          children: [
+            // Main image viewer
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: Center(child: Image.file(widget.image)),
             ),
-          ),
 
-          // Caption input that moves with keyboard
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: AppStyles.bottomInset(context) > 0
-                ? AppStyles.bottomInset(context)
-                : AppStyles.screenHeight(context) / 15,
-            child: Container(
-              color: Colors.black54,
-              padding: EdgeInsets.symmetric(
-                horizontal: AppStyles.screenWidth(context) * 0.03,
-                vertical: AppStyles.screenHeight(context) * 0.015,
+            // Close button
+            Positioned(
+              top: AppStyles.screenHeight(context) * 0.05,
+              left: AppStyles.screenWidth(context) * 0.04,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => isLoading ? () {} : AppRouter.back(context),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      cursorColor: AppStyles.smoke,
-                      controller: textController,
-                      style: const TextStyle(color: Colors.white),
-                      maxLines: 3,
-                      minLines: 1,
-                      decoration: const InputDecoration(
-                        hintText: 'Add a caption...',
-                        hintStyle: TextStyle(color: Colors.white70),
-                        border: InputBorder.none,
+            ),
+
+            // Caption input that moves with keyboard
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: AppStyles.bottomInset(context) > 0
+                  ? AppStyles.bottomInset(context)
+                  : AppStyles.screenHeight(context) / 15,
+              child: Container(
+                color: Colors.black54,
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppStyles.screenWidth(context) * 0.03,
+                  vertical: AppStyles.screenHeight(context) * 0.015,
+                ),
+                child: isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              cursorColor: AppStyles.smoke,
+                              controller: textController,
+                              style: const TextStyle(color: Colors.white),
+                              maxLines: 3,
+                              minLines: 1,
+                              decoration: const InputDecoration(
+                                hintText: 'Add a caption...',
+                                hintStyle: TextStyle(color: Colors.white70),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.send, color: Colors.white),
+                            onPressed: () async {
+                              setState(() {
+                                isLoading = true;
+                              });
+                              File? compressedImage = await context
+                                  .readImagePickerProvider
+                                  .compressImage(widget.image);
+
+                              if (compressedImage == null) return;
+                              String filePath =
+                                  "chat_imgs/${context.readAuthProvider.user!.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg";
+                              Reference storageRef = FirebaseStorage.instance
+                                  .ref()
+                                  .child(filePath);
+                              UploadTask uploadTask = storageRef.putFile(
+                                compressedImage,
+                              );
+
+                              // Optional: Show upload progress
+                              uploadTask.snapshotEvents.listen((
+                                TaskSnapshot snapshot,
+                              ) {
+                                double progress =
+                                    snapshot.bytesTransferred /
+                                    snapshot.totalBytes;
+                                print(
+                                  "📤 Upload Progress: ${(progress * 100).toStringAsFixed(2)}%",
+                                );
+                              });
+
+                              TaskSnapshot snapshot = await uploadTask;
+                              String downloadUrl = await snapshot.ref
+                                  .getDownloadURL();
+                              await FirebaseFirestore.instance
+                                  .collection('chats')
+                                  .add(
+                                    ChatMessageModel(
+                                      messageId: '',
+                                      metadata: MetaModel(
+                                        img: downloadUrl,
+                                        text: textController.text,
+                                        url: extractFirstUrl(
+                                          textController.text.trim(),
+                                        ),
+                                      ),
+                                      senderId:
+                                          context.readAuthProvider.user!.uid,
+                                      createdAt:
+                                          DateTime.now().millisecondsSinceEpoch,
+                                      name: context
+                                          .readAuthProvider
+                                          .userData!
+                                          .username,
+                                    ).toJson(),
+                                  );
+
+                              isLoading = false;
+
+                              AppRouter.back(context);
+                            },
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: () async {
-                      if (context.readImagePickerProvider.selectedImage !=
-                          null) {
-                        File? compressedImage = await context
-                            .readImagePickerProvider
-                            .compressImage(
-                              context.readImagePickerProvider.selectedImage!,
-                            );
-
-                        if (compressedImage == null) return;
-                        String filePath =
-                            "chat_imgs/${context.readAuthProvider.user!.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg";
-                        Reference storageRef = FirebaseStorage.instance
-                            .ref()
-                            .child(filePath);
-                        UploadTask uploadTask = storageRef.putFile(
-                          compressedImage,
-                        );
-
-                        // Optional: Show upload progress
-                        uploadTask.snapshotEvents.listen((
-                          TaskSnapshot snapshot,
-                        ) {
-                          double progress =
-                              snapshot.bytesTransferred / snapshot.totalBytes;
-                          print(
-                            "📤 Upload Progress: ${(progress * 100).toStringAsFixed(2)}%",
-                          );
-                        });
-
-                        TaskSnapshot snapshot = await uploadTask;
-                        String downloadUrl = await snapshot.ref
-                            .getDownloadURL();
-                        await FirebaseFirestore.instance
-                            .collection('chats')
-                            .add(
-                              ChatMessageModel(
-                                messageId: '',
-                                metadata: MetaModel(
-                                  img: downloadUrl,
-                                  text: textController.text,
-                                  url: extractFirstUrl(
-                                    textController.text.trim(),
-                                  ),
-                                ),
-                                senderId: context.readAuthProvider.user!.uid,
-                                createdAt:
-                                    DateTime.now().millisecondsSinceEpoch,
-                                name:
-                                    context.readAuthProvider.userData!.username,
-                              ).toJson(),
-                            );
-                      }
-
-                      AppRouter.back(context);
-                    },
-                  ),
-                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
