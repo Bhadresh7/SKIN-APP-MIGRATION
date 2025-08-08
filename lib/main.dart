@@ -20,6 +20,7 @@ import 'firebase_options.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  PushNotificationService().showHeadsUpNotification(message);
   AppLoggerHelper.logInfo(message.data.entries.toString());
 }
 

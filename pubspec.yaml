@@ -3,7 +3,7 @@ description: "A new Flutter project."
 
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.8.1
@@ -80,6 +80,8 @@ dependencies:
 
   #Placeholder
   shimmer: ^3.0.0
+
+  flutter_local_notifications: ^19.4.0
 
 
 dev_dependencies:
