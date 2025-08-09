@@ -210,21 +210,31 @@ class SuperAdminProvider with ChangeNotifier {
 
   /// Toggle user block status
   Future<void> toggleBlockStatus(String userId, bool newBlockStatus) async {
+    _isLoading = true;
+    notifyListeners();
     try {
       await _service.updateUserBlockStatus(userId, newBlockStatus);
       await _updateUserLocally(userId, {'isBlocked': newBlockStatus});
     } catch (e) {
       print('❌ Error toggling block status: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   /// Toggle user posting access
   Future<void> togglePostingAccess(String userId, bool newPostAccess) async {
+    _isLoading = true;
+    notifyListeners();
     try {
       await _service.updateUserPostingAccess(userId, newPostAccess);
       await _updateUserLocally(userId, {'canPost': newPostAccess});
     } catch (e) {
       print('❌ Error toggling posting access: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -272,10 +282,11 @@ class SuperAdminProvider with ChangeNotifier {
       int adminCount = 0;
       int userCount = 0;
       int blockedUserCount = 0;
+      int allCount = 0;
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
-
+        allCount++;
         if (data.containsKey('isBlocked') && data['isBlocked'] == true) {
           blockedUserCount++;
         }
@@ -293,6 +304,7 @@ class SuperAdminProvider with ChangeNotifier {
         'admin': adminCount,
         'user': userCount,
         'blocked': blockedUserCount,
+        'all': allCount,
       };
     });
   }

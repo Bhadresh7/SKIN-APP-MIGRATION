@@ -184,10 +184,10 @@ class _UserListViewState extends State<UserListView> {
         children: [
           Card(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(6),
             ),
-            elevation: 2,
-            color: AppStyles.smoke,
+            elevation: 2.4,
+            color: Color(0xFFF5F2FD),
             child: InkWell(
               onTap: () => _showOptionsSheet(
                 context: context,
@@ -199,17 +199,17 @@ class _UserListViewState extends State<UserListView> {
                 email: email,
               ),
               child: Padding(
-                padding: EdgeInsets.all(12.r),
+                padding: EdgeInsets.all(10.r),
                 child: Row(
                   children: [
                     img.isNotEmpty
                         ? CircleAvatar(
-                            radius: 50,
+                            radius: 35,
                             backgroundImage: CachedNetworkImageProvider(img),
                           )
                         : CircleAvatar(
-                            radius: 50,
-                            child: SvgPicture.asset(AppAssets.profile),
+                            radius: 35,
+                            child: SvgPicture.asset(AppAssets.userIcon),
                           ),
                     SizedBox(width: AppStyles.padding),
                     Expanded(
@@ -222,6 +222,7 @@ class _UserListViewState extends State<UserListView> {
                             style: TextStyle(
                               fontSize: AppStyles.heading,
                               overflow: TextOverflow.ellipsis,
+                              color: AppStyles.primary,
                             ),
                           ),
                           Text(
@@ -239,11 +240,11 @@ class _UserListViewState extends State<UserListView> {
               ),
             ),
           ),
-          if (isBlocked) _buildBadge("Blocked", Colors.red, Icons.block),
+          if (isBlocked) _buildBadge("Blocked", Color(0xFFF55772), Icons.block),
           if (role == AppStatus.kAdmin && canPost && !isBlocked)
             _buildBadge(
               "Admin",
-              AppStyles.primary,
+              Color(0xFF9076DE),
               null,
               iconAsset: AppAssets.crown,
             ),
@@ -259,13 +260,13 @@ class _UserListViewState extends State<UserListView> {
     String? iconAsset,
   }) {
     return Positioned(
-      top: 15.r,
-      right: 15.r,
+      top: 7.r,
+      right: 7.r,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 4.r, horizontal: 8.r),
+        padding: EdgeInsets.symmetric(vertical: 2.5.r, horizontal: 4.r),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+          borderRadius: BorderRadius.circular(5.r),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -292,7 +293,8 @@ class _UserListViewState extends State<UserListView> {
     return Consumer<SuperAdminProvider>(
       builder: (context, provider, _) {
         // Show loading indicator when initially loading and users list is empty
-        if (provider.isEmpty && provider.isLoading) {
+
+        if (provider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 

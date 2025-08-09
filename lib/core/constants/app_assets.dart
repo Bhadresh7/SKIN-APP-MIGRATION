@@ -6,4 +6,5 @@ class AppAssets {
   static final String logo = "assets/logo/skin-logo.png";
   static final String profileIcon = "assets/icons/profile.png";
   static final String profileImage = "assets/icons/profileimg.png";
+  static final String userIcon = "assets/svgs/user_icon.svg";
 }

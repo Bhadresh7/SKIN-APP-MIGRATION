@@ -150,7 +150,7 @@ class _ViewAllUsersScreenState extends State<ViewAllUsersScreen> {
   Widget build(BuildContext context) {
     return KBackgroundScaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(0.1.sh),
+        preferredSize: Size.fromHeight(0.8.sh * 0.1),
         child: AppBar(
           elevation: 0,
           backgroundColor: Colors.transparent,
@@ -170,66 +170,69 @@ class _ViewAllUsersScreenState extends State<ViewAllUsersScreen> {
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5.0,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          StreamBuilder<Map<String, dynamic>>(
+          StreamBuilder<Map<String, int>>(
             stream: context.readSuperAdminProvider.userAndAdminCountStream,
-            builder: (_, snapshot) {
-              final data = snapshot.data ?? {};
-              final employeeCount = data["admin"] ?? 0;
-              final candidateCount = data["user"] ?? 0;
-              final blockedUserCount = data["blocked"] ?? 0;
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.red),
+                );
+              }
+              final counts =
+                  snapshot.data ??
+                  {'all': 0, 'admin': 0, 'user': 0, 'blocked': 0};
+
+              // Labels with corresponding keys from counts map
+              final chipData = [
+                {'label': 'All', 'key': 'all'},
+                {'label': 'Employer', 'key': 'admin'},
+                {'label': 'Candidate', 'key': 'user'},
+                {'label': 'Blocked', 'key': 'blocked'},
+              ];
 
               return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Text(
-                      "Employer: $employeeCount  ",
-                      style: TextStyle(fontSize: AppStyles.bodyText),
-                    ),
-                    Text(
-                      "Candidate: $candidateCount  ",
-                      style: TextStyle(fontSize: AppStyles.bodyText),
-                    ),
-                    Text(
-                      "Blocked: $blockedUserCount",
-                      style: TextStyle(fontSize: AppStyles.bodyText),
-                    ),
-                  ],
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(chipData.length, (index) {
+                      final label = chipData[index]['label']!;
+                      final key = chipData[index]['key']!;
+                      final count = counts[key] ?? 0;
+
+                      return Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 5.w),
+                        child: ChoiceChip(
+                          showCheckmark: false,
+                          label: Text(
+                            "$label ($count)", // 👈 Add count here
+                            style: TextStyle(
+                              color: selectedIndex == index
+                                  ? Colors.white
+                                  : Colors.black,
+                            ),
+                          ),
+                          selected: selectedIndex == index,
+                          selectedColor: AppStyles.primary,
+                          onSelected: (_) {
+                            setState(() {
+                              selectedIndex = index;
+                            });
+                          },
+                        ),
+                      );
+                    }),
+                  ),
                 ),
               );
             },
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 10.h),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(chipLabels.length, (index) {
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5.w),
-                    child: ChoiceChip(
-                      showCheckmark: false,
-                      label: Text(
-                        chipLabels[index],
-                        style: TextStyle(
-                          color: selectedIndex == index
-                              ? Colors.white
-                              : Colors.black,
-                        ),
-                      ),
-                      selected: selectedIndex == index,
-                      selectedColor: AppStyles.primary,
-                      onSelected: (_) {
-                        setState(() {
-                          selectedIndex = index;
-                        });
-                      },
-                    ),
-                  );
-                }),
-              ),
-            ),
           ),
           Expanded(child: UserListView(filter: chipLabels[selectedIndex])),
         ],
