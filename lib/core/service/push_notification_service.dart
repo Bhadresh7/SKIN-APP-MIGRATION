@@ -10,6 +10,7 @@ class PushNotificationService {
     await _fcm.requestPermission();
     print("FCM Permission granted");
 
+    // FirebaseMessaging.onBackgroundMessage.
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Foreground message: ${message.notification?.title}');
     });
@@ -37,7 +38,7 @@ class PushNotificationService {
 
   Future<void> initializeNotifications() async {
     const androidInit = AndroidInitializationSettings('ic_notification');
-    const initSettings = InitializationSettings(android: androidInit);
+    InitializationSettings(android: androidInit);
 
     // Handling background notifications
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -47,27 +48,56 @@ class PushNotificationService {
 
   Future<void> showHeadsUpNotification(RemoteMessage message) async {
     try {
-      // Android notification settings with heads-up notification (full-screen)
-      const androidDetails = AndroidNotificationDetails(
-        'your_channel_id',
-        'your_channel_name',
-        importance: Importance.max,
-        priority: Priority.max,
-        ticker: 'ticker',
-        fullScreenIntent: true,
-      );
-      const platformDetails = NotificationDetails(android: androidDetails);
+      print("ONE ----------");
 
-      // Show the notification as a heads-up notification
+      String? imgUrl = message.notification?.android?.imageUrl;
+      AndroidNotificationDetails androidDetails;
+
+      // download the image from the internet
+      if (imgUrl != null && imgUrl.isNotEmpty) {
+        // creating image object to show in the notification
+        final bigPicture = BigPictureStyleInformation(
+          FilePathAndroidBitmap(imgUrl),
+          contentTitle: message.notification?.title,
+          summaryText: message.notification?.body,
+          htmlFormatContentTitle: true,
+          htmlFormatSummaryText: true,
+          hideExpandedLargeIcon: false,
+        );
+
+        androidDetails = AndroidNotificationDetails(
+          'your_channel_id',
+          'your_channel_name',
+          styleInformation: bigPicture,
+          importance: Importance.max,
+          priority: Priority.high,
+          ticker: 'ticker',
+          fullScreenIntent: true,
+          largeIcon: DrawableResourceAndroidBitmap('ic_notification'),
+        );
+      } else {
+        androidDetails = AndroidNotificationDetails(
+          'your_channel_id',
+          'your_channel_name',
+          importance: Importance.max,
+          priority: Priority.max,
+          ticker: 'ticker',
+          fullScreenIntent: true,
+        );
+      }
+
+      final platformDetails = NotificationDetails(android: androidDetails);
+      print("TWO ----------");
+
       await _flutterLocalNotificationsPlugin.show(
-        0, // notification id
-        message.data['username'],
-        message.data['text'],
-
-        // ?? message.data['img'] ?? message.data['url'],
+        0,
+        message.notification?.body,
+        message.notification?.title,
         platformDetails,
         payload: message.data.toString(),
       );
+
+      print("THREE --------------------------");
     } catch (e) {
       print("🔥 Error showing heads-up notification: $e");
     }

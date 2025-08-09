@@ -5,18 +5,28 @@ const { getMessaging } = require("firebase-admin/messaging");
 
 initializeApp();
 
+
+function sanitizeEmail(email) {
+  return email.replace(/[^\w]/g, "_"); // Replace anything not [a-zA-Z0-9_]
+}
+
+
+
 exports.notifications = onDocumentCreated(
   {
 
     document: "chats/{docId}",
   },
   async (event) => {
+  console.log("message triggered");
     try {
       const snap = event.data;
       const chatId = event.params.docId;
 
       const chatData = snap.data();
-      const username = chatData.username || "Unknown";
+      console.log(chatData);
+      const username = chatData.name || "Unknown";
+      const currentUserId = chatData.id || "";
       const metadata = chatData.metadata || {};
       const text = metadata.text || "";
       const img = metadata.img || "";
@@ -29,17 +39,18 @@ exports.notifications = onDocumentCreated(
         const userData = doc.data();
         const email = userData.email;
           console.log(email);
-
-        if (email) {
+          console.log(userData);
+          const isCurrentUser = userData.uid == currentUserId ;
+          const isBlocked = userData.isBlocked;
+          console.log(`isCurrentUser ${isCurrentUser} and isBlocked ${isBlocked}`);
+        if (email && !isCurrentUser && !isBlocked) {
           const message = {
-            data: {
-              "chatId":chatId,
-              "username":username,
-              "text":text,
-              "img":img,
-              "url":url,
-            },
-            topic: email,
+           notification: {
+              title: username,
+              body: text,
+              image:img,
+           },
+            topic: sanitizeEmail(email),
           };
 
           promises.push(getMessaging().send(message));
